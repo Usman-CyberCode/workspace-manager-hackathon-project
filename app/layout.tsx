@@ -3,8 +3,8 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "Workspace Manager Capstone",
-  description: "Client-side Notion/Jira style app",
+  title: "Dev on - Workspace Platform",
+  description: "Next-gen workspace and task management engine",
 };
 
 export default function RootLayout({
@@ -13,8 +13,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased">
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased font-sans transition-colors duration-300" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

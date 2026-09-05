@@ -1,7 +1,10 @@
 'use client';
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, setSelectedTaskId, addComment, updateTask, convertSubtaskToTask, toggleSubtask } from '@/store';
+import { 
+  RootState, setSelectedTaskId, addComment, updateTask, 
+  convertSubtaskToTask, toggleSubtask 
+} from '@/store';
 
 export default function TaskDetailModal() {
   const { selectedTaskId, items: tasks } = useSelector((state: RootState) => state.tasks);
@@ -22,7 +25,7 @@ export default function TaskDetailModal() {
         const attachments = task.attachments || [];
         dispatch(updateTask({ 
           id: task.id, 
-          attachments: [...attachments, { name: file.name, url: reader.result }] 
+          attachments: [...attachments, { name: file.name, url: reader.result as string }] 
         }));
       };
       reader.readAsDataURL(file);
@@ -44,15 +47,22 @@ export default function TaskDetailModal() {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-y-auto max-h-[90vh] text-slate-800 dark:text-slate-100">
-        <div className="flex justify-between items-center border-b pb-4 dark:border-slate-800">
+    <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+      <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full p-6 shadow-2xl animate-scaleUp overflow-y-auto max-h-[90vh] text-slate-800 font-sans">
+        
+        {/* Header Title */}
+        <div className="flex justify-between items-center border-b border-slate-100 pb-4">
           <input 
             value={task.title} 
             onChange={(e) => dispatch(updateTask({ id: task.id, title: e.target.value }))}
-            className="text-2xl font-black bg-transparent outline-none dark:text-white w-full tracking-tight"
+            className="text-2xl font-black bg-transparent outline-none text-slate-900 w-full tracking-tight focus:ring-2 focus:ring-blue-600 rounded-lg px-1"
           />
-          <button onClick={() => dispatch(setSelectedTaskId(null))} className="p-2 text-slate-400 hover:text-slate-800 dark:hover:text-white text-lg">✕</button>
+          <button 
+            onClick={() => dispatch(setSelectedTaskId(null))} 
+            className="p-2 text-slate-400 hover:text-slate-800 text-lg font-bold rounded-xl hover:bg-slate-100 transition-all"
+          >
+            ✕
+          </button>
         </div>
 
         <div className="mt-6 space-y-6 text-xs">
@@ -62,77 +72,89 @@ export default function TaskDetailModal() {
             <textarea 
               value={task.description}
               onChange={(e) => dispatch(updateTask({ id: task.id, description: e.target.value }))}
-              className="w-full p-3 border dark:border-slate-700/80 rounded-2xl dark:bg-slate-800/50 outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 border border-slate-200 rounded-2xl bg-slate-50 outline-none focus:border-blue-600 text-slate-900 font-medium"
               rows={3}
             />
           </div>
 
-          {/* Subtasks with Checklist and Promotion to Full Task */}
+          {/* Subtasks Checklist Engine */}
           <div>
             <label className="font-bold uppercase tracking-wider text-slate-400 block mb-2">Subtasks Engine</label>
             <div className="space-y-2">
-              {task.subtasks?.length > 0 ? (
+              {task.subtasks && task.subtasks.length > 0 ? (
                 task.subtasks.map((st: any) => (
-                  <div key={st.id} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border dark:border-slate-700/50">
+                  <div key={st.id} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200">
                     <div className="flex items-center gap-2">
                       <input 
                         type="checkbox" 
                         checked={st.completed} 
                         onChange={() => dispatch(toggleSubtask({ taskId: task.id, subtaskId: st.id }))}
-                        className="rounded accent-blue-600"
+                        className="rounded accent-blue-600 w-4 h-4"
                       />
-                      <span className={st.completed ? 'line-through text-slate-400' : 'font-medium'}>{st.title}</span>
+                      <span className={st.completed ? 'line-through text-slate-400' : 'font-semibold text-slate-800'}>{st.title}</span>
                     </div>
                     <button 
                       onClick={() => dispatch(convertSubtaskToTask({ taskId: task.id, subtaskId: st.id }))}
-                      className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-lg font-semibold hover:bg-blue-500 hover:text-white transition-all"
+                      className="text-[10px] bg-blue-50 text-blue-600 font-bold px-2.5 py-1 rounded-lg border border-blue-200 hover:bg-blue-600 hover:text-white transition-all"
                     >
                       Promote to Task ↗
                     </button>
                   </div>
                 ))
               ) : (
-                <p className="text-slate-400 italic">No subtasks added.</p>
+                <p className="text-slate-400 italic">No subtasks added yet.</p>
               )}
             </div>
           </div>
 
-          {/* Attachments (Base64) */}
+          {/* Attachments */}
           <div>
-            <label className="font-bold uppercase tracking-wider text-slate-400 block mb-2">Attachments (Base64)</label>
-            <input type="file" onChange={handleFileUpload} className="block w-full text-slate-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+            <label className="font-bold uppercase tracking-wider text-slate-400 block mb-2">Attachments (Base64 Upload)</label>
+            <input 
+              type="file" 
+              onChange={handleFileUpload} 
+              className="block w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 transition-all cursor-pointer" 
+            />
             <div className="mt-3 flex gap-2 flex-wrap">
               {task.attachments?.map((file: any, index: number) => (
-                <a key={index} href={file.url} download={file.name} className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-blue-500 underline flex items-center gap-1 font-medium">
+                <a key={index} href={file.url} download={file.name} className="px-3 py-1.5 bg-slate-100 rounded-xl text-blue-600 underline flex items-center gap-1 font-bold border border-slate-200">
                   📎 {file.name}
                 </a>
               ))}
             </div>
           </div>
 
-          {/* Comments Section */}
-          <div className="border-t pt-4 dark:border-slate-800">
-            <label className="font-bold uppercase tracking-wider text-slate-400 block mb-3">Comments Thread</label>
-            <div className="space-y-2 mb-3 max-h-36 overflow-y-auto">
-              {task.comments?.map((c: any) => (
-                <div key={c.id} className="bg-slate-100 dark:bg-slate-800 p-3 rounded-2xl">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-bold text-blue-500">{c.author}</span>
-                    <span className="text-[10px] text-slate-400">{c.time}</span>
+          {/* Comments */}
+          <div className="border-t border-slate-100 pt-4">
+            <label className="font-bold uppercase tracking-wider text-slate-400 block mb-3">Comments Feed</label>
+            <div className="space-y-2 mb-3 max-h-36 overflow-y-auto pr-1">
+              {task.comments && task.comments.length > 0 ? (
+                task.comments.map((c: any) => (
+                  <div key={c.id} className="bg-slate-50 border border-slate-100 p-3 rounded-2xl">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-bold text-blue-600">{c.author}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">{c.time}</span>
+                    </div>
+                    <p className="text-slate-700 font-medium">{c.text}</p>
                   </div>
-                  <p>{c.text}</p>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-slate-400 italic">No comments posted.</p>
+              )}
             </div>
+
             <div className="flex gap-2">
               <input 
                 type="text" 
                 placeholder="Write a comment..." 
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                className="flex-1 p-2.5 border dark:border-slate-700 rounded-xl dark:bg-slate-800 outline-none"
+                className="flex-1 p-3 border border-slate-200 rounded-xl bg-slate-50 outline-none focus:border-blue-600 text-slate-900 font-medium"
               />
-              <button onClick={handleAddComment} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all">
+              <button 
+                onClick={handleAddComment} 
+                className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl active:scale-95 transition-all shadow-md shadow-blue-500/20"
+              >
                 Post
               </button>
             </div>
