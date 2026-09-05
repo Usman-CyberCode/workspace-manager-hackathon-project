@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import Sidebar from "@/components/Sidebar";
@@ -9,21 +10,28 @@ import TaskDetailModal from "@/components/TaskDetailModal";
 import LoginScreen from "@/components/LoginScreen";
 
 export default function Home() {
+  const [mounted, setMounted] = useState(false);
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
 
-  if (!isAuthenticated) {
-    return <LoginScreen />;
-  }
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+  if (!isAuthenticated) return <LoginScreen />;
 
   return (
-    <main className="flex min-h-screen bg-slate-50 text-slate-900 font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
+      {/* Structural Fix: Sidebar strictly renders ONCE here */}
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
         <Navbar />
-        <KanbanBoard />
+        <main className="flex-1 p-6">
+          <KanbanBoard />
+        </main>
       </div>
       <CommandPalette />
       <TaskDetailModal />
-    </main>
+    </div>
   );
 }

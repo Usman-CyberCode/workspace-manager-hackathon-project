@@ -4,9 +4,9 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState, setActiveProject, addProject, switchUser } from '@/store';
 
 export default function Sidebar() {
-  const { projects, activeProjectId } = useSelector((state: RootState) => state.workspace);
+  const { projects = [], activeProjectId } = useSelector((state: RootState) => state.workspace) || {};
   const activeWorkspaceId = useSelector((state: RootState) => state.workspace.activeWorkspaceId);
-  const { currentUser, users } = useSelector((state: RootState) => state.auth);
+  const { currentUser, users = [] } = useSelector((state: RootState) => state.auth) || {};
   const dispatch = useDispatch();
 
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -27,9 +27,9 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="w-64 bg-slate-900 text-slate-100 min-h-screen p-4 flex flex-col justify-between border-r border-slate-800 font-sans shadow-xl">
+      <aside className="w-64 bg-slate-900 text-slate-100 h-screen p-4 flex flex-col justify-between border-r border-slate-800 font-sans shrink-0 z-20">
         <div>
-          {/* Logo Branding */}
+          {/* Branding */}
           <div className="flex items-center gap-3 px-3 py-3 mb-6 bg-slate-800/80 rounded-2xl border border-slate-700/60 shadow-md">
             <div className="w-8 h-8 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center justify-center shadow-md">
               D
@@ -40,24 +40,24 @@ export default function Sidebar() {
             </div>
           </div>
 
-          {/* Projects Navigation with CSS Folder Icons */}
+          {/* Projects Section */}
           <div className="mb-6">
             <div className="flex justify-between items-center px-2 mb-3">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Projects</span>
               <button 
                 onClick={() => setIsProjectModalOpen(true)} 
-                className="px-2 py-0.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg font-bold text-xs transition-all shadow-2xs"
+                className="px-2 py-0.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg font-bold text-xs transition-all cursor-pointer"
               >
                 + New
               </button>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
               {projects.map((proj: any) => (
                 <button
                   key={proj.id}
                   onClick={() => dispatch(setActiveProject(proj.id))}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 ${
+                  className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
                     activeProjectId === proj.id 
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
                       : 'hover:bg-slate-800/80 text-slate-400'
@@ -71,13 +71,15 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* CSS Persona Switcher */}
-        <div className="border-t border-slate-800 pt-4 space-y-2">
-          <label className="text-[10px] font-bold text-slate-400 uppercase block">Switch Persona</label>
+        {/* Persona Switcher at Bottom */}
+        <div className="border-t border-slate-800 pt-4 space-y-1.5 bg-slate-800/60 p-3 rounded-2xl border border-slate-700/50">
+          <label className="text-[10px] font-extrabold text-blue-400 uppercase tracking-wider block">
+            👤 Switch Persona
+          </label>
           <select 
             value={currentUser?.id || ''} 
             onChange={(e) => dispatch(switchUser(e.target.value))}
-            className="w-full bg-slate-800 border border-slate-700/80 text-xs rounded-xl p-2.5 text-white outline-none font-bold cursor-pointer hover:bg-slate-700/80 transition-all shadow-inner"
+            className="w-full bg-slate-900 border border-slate-700 text-xs rounded-xl p-2 text-white outline-none font-bold cursor-pointer hover:bg-slate-800 transition-all shadow-inner"
           >
             {users.map((u: any) => (
               <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
@@ -86,7 +88,7 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* Styled Project Creation Modal */}
+      {/* Project Modal */}
       {isProjectModalOpen && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-sm w-full p-6 shadow-2xl animate-scaleUp">
@@ -101,8 +103,8 @@ export default function Sidebar() {
                 autoFocus
               />
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setIsProjectModalOpen(false)} className="px-4 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl shadow-md">Create</button>
+                <button type="button" onClick={() => setIsProjectModalOpen(false)} className="px-4 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl cursor-pointer">Cancel</button>
+                <button type="submit" className="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer">Create</button>
               </div>
             </form>
           </div>

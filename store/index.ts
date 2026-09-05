@@ -59,6 +59,13 @@ const loadState = () => {
 
 const savedState = loadState();
 
+// 2 Extra Dummy Projects Added Here
+const EXTENDED_PROJECTS: Project[] = [
+  ...INITIAL_PROJECTS,
+  { id: 'proj-3', workspaceId: 'ws-1', name: 'Backend API Engine', color: 'bg-emerald-500' },
+  { id: 'proj-4', workspaceId: 'ws-1', name: 'Mobile App UI Kit', color: 'bg-purple-500' }
+];
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: savedState?.auth || {
@@ -75,7 +82,7 @@ const authSlice = createSlice({
       }
     },
     logout: (state) => {
-      state.currentUser = null;
+      state.currentUser = null as unknown as User;
       state.isAuthenticated = false;
     },
     switchUser: (state, action: PayloadAction<string>) => {
@@ -101,7 +108,7 @@ const workspaceSlice = createSlice({
   initialState: savedState?.workspace || {
     workspaces: INITIAL_WORKSPACES || [],
     activeWorkspaceId: 'ws-1',
-    projects: (INITIAL_PROJECTS as Project[]) || [],
+    projects: EXTENDED_PROJECTS,
     activeProjectId: 'proj-1'
   },
   reducers: {

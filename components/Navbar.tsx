@@ -3,13 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
   RootState, setActiveView, setSearchQuery, setFilterPriority, 
-  addTask, importStateData, clearNotifications 
+  addTask, clearNotifications 
 } from '@/store';
 import UserProfileModal from '@/components/UserProfileModal';
 
 export default function Navbar() {
   const { activeView, searchQuery, filterPriority, notifications = [] } = useSelector((state: RootState) => state.tasks) || {};
-  const currentUser = useSelector((state: RootState) => state.auth.currentUser);
+  const { currentUser } = useSelector((state: RootState) => state.auth) || {};
   const activeProjectId = useSelector((state: RootState) => state.workspace.activeProjectId);
   const state = useSelector((state: RootState) => state);
   const dispatch = useDispatch();
@@ -35,7 +35,7 @@ export default function Navbar() {
       id: Date.now().toString(),
       projectId: activeProjectId,
       title: taskTitle,
-      description: taskDesc || 'Task detail',
+      description: taskDesc || 'Task details',
       status: 'todo',
       priority: taskPriority,
       dueDate: new Date().toISOString().split('T')[0],
@@ -47,28 +47,12 @@ export default function Navbar() {
     setIsTaskModalOpen(false);
   };
 
-  const exportJSON = () => {
+  const handleExportJSON = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
     const anchor = document.createElement('a');
     anchor.setAttribute("href", dataStr);
     anchor.setAttribute("download", `dev_on_backup.json`);
     anchor.click();
-  };
-
-  const importJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const parsed = JSON.parse(event.target?.result as string);
-          dispatch(importStateData(parsed));
-        } catch {
-          alert("Invalid JSON file!");
-        }
-      };
-      reader.readAsText(file);
-    }
   };
 
   return (
@@ -80,18 +64,18 @@ export default function Navbar() {
           {currentUser && (
             <button 
               onClick={() => setIsProfileOpen(true)} 
-              className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 transition-all border border-slate-200 shadow-2xs group"
+              className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 transition-all border border-slate-200 shadow-2xs group cursor-pointer"
             >
-              <img src={currentUser.avatar} alt="Profile" className="w-8 h-8 rounded-full bg-slate-200" />
+              <img src={currentUser.avatar} alt="Profile" className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 object-cover" />
               <span className="font-bold text-slate-800 pr-2 group-hover:text-blue-600">{currentUser.name}</span>
             </button>
           )}
 
-          {/* Interactive Bell Notification */}
+          {/* Bell Notification Dropdown */}
           <div className="relative">
             <button 
               onClick={() => setIsNotifOpen(!isNotifOpen)}
-              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 relative transition-all"
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 relative transition-all cursor-pointer"
             >
               🔔
               {notifications.length > 0 && (
@@ -106,7 +90,7 @@ export default function Navbar() {
                 <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
                   <h4 className="font-bold text-slate-900">Notifications</h4>
                   {notifications.length > 0 && (
-                    <button onClick={() => dispatch(clearNotifications())} className="text-[10px] text-blue-600 font-bold hover:underline">
+                    <button onClick={() => dispatch(clearNotifications())} className="text-[10px] text-blue-600 font-bold hover:underline cursor-pointer">
                       Clear All
                     </button>
                   )}
@@ -136,12 +120,12 @@ export default function Navbar() {
           />
         </div>
 
-        {/* RIGHT SIDE: View Selectors (Kanban, Table, Calendar, List) */}
+        {/* RIGHT SIDE: Priority Filter, View Switchers & Actions */}
         <div className="flex items-center gap-3">
           <select 
             value={filterPriority} 
             onChange={(e) => dispatch(setFilterPriority(e.target.value))}
-            className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none"
+            className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none cursor-pointer"
           >
             <option value="all">Priority: All</option>
             <option value="urgent">🔴 Urgent</option>
@@ -149,38 +133,33 @@ export default function Navbar() {
             <option value="medium">🟢 Medium</option>
           </select>
 
-          {/* Views Engine Moved to Right */}
+          {/* Views Engine */}
           <div className="bg-slate-100 p-1 rounded-xl flex border border-slate-200 shadow-2xs">
-            <button onClick={() => dispatch(setActiveView('kanban'))} className={`px-3 py-1.5 rounded-lg font-bold transition-all ${activeView === 'kanban' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'}`}>
+            <button onClick={() => dispatch(setActiveView('kanban'))} className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${activeView === 'kanban' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'}`}>
               Kanban
             </button>
-            <button onClick={() => dispatch(setActiveView('table'))} className={`px-3 py-1.5 rounded-lg font-bold transition-all ${activeView === 'table' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'}`}>
+            <button onClick={() => dispatch(setActiveView('table'))} className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${activeView === 'table' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'}`}>
               Table
             </button>
-            <button onClick={() => dispatch(setActiveView('calendar'))} className={`px-3 py-1.5 rounded-lg font-bold transition-all ${activeView === 'calendar' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'}`}>
+            <button onClick={() => dispatch(setActiveView('calendar'))} className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${activeView === 'calendar' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'}`}>
               Calendar
             </button>
-            <button onClick={() => dispatch(setActiveView('list'))} className={`px-3 py-1.5 rounded-lg font-bold transition-all ${activeView === 'list' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'}`}>
+            <button onClick={() => dispatch(setActiveView('list'))} className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${activeView === 'list' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'}`}>
               List
             </button>
           </div>
 
-          <button onClick={() => setIsTaskModalOpen(true)} className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold rounded-xl shadow-md transition-all active:scale-95">
+          <button onClick={() => setIsTaskModalOpen(true)} className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold rounded-xl shadow-md transition-all active:scale-95 cursor-pointer">
             + New Task
           </button>
 
-          <button onClick={exportJSON} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl font-bold">
+          <button onClick={handleExportJSON} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer">
             Export
           </button>
-
-          <label className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer">
-            Import
-            <input type="file" accept=".json" onChange={importJSON} className="hidden" />
-          </label>
         </div>
       </header>
 
-      {/* Task Creation Modal */}
+      {/* New Task Modal */}
       {isTaskModalOpen && (
         <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl animate-scaleUp">
@@ -223,8 +202,8 @@ export default function Navbar() {
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                <button type="button" onClick={() => setIsTaskModalOpen(false)} className="px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl">Cancel</button>
-                <button type="submit" className="px-5 py-2 bg-blue-600 text-white font-bold rounded-xl shadow-md active:scale-95">Create Task</button>
+                <button type="button" onClick={() => setIsTaskModalOpen(false)} className="px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl cursor-pointer">Cancel</button>
+                <button type="submit" className="px-5 py-2 bg-blue-600 text-white font-bold rounded-xl shadow-md active:scale-95 cursor-pointer">Create Task</button>
               </div>
             </form>
           </div>
