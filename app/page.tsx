@@ -18,11 +18,15 @@ export default function Home() {
   }, []);
 
   if (!mounted) return null;
-  if (!isAuthenticated) return <LoginScreen />;
 
+  // Agar user authenticated nahi hai toh Login/OTP screen show karein
+  if (!isAuthenticated) {
+    return <LoginScreen />;
+  }
+
+  // Agar authenticated hai toh Main Workspace Board render karein
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
-      {/* Structural Fix: Sidebar strictly renders ONCE here */}
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
         <Navbar />

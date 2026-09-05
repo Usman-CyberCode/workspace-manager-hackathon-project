@@ -47,19 +47,37 @@ export default function Navbar() {
     setIsTaskModalOpen(false);
   };
 
+  // Safe JSON Backup Export Function
   const handleExportJSON = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
-    const anchor = document.createElement('a');
-    anchor.setAttribute("href", dataStr);
-    anchor.setAttribute("download", `dev_on_backup.json`);
-    anchor.click();
+    try {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `dev_on_workspace_backup_${new Date().toISOString().slice(0, 10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    } catch (error) {
+      console.error("JSON Export failed:", error);
+      alert("Failed to export JSON backup.");
+    }
+  };
+
+  // Safe PDF / Print Export Function
+  const handleExportPDF = () => {
+    try {
+      window.print();
+    } catch (error) {
+      console.error("PDF Export failed:", error);
+      alert("Failed to trigger PDF print dialog.");
+    }
   };
 
   return (
     <>
       <header className="sticky top-0 z-30 bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between gap-4 text-xs font-sans shadow-xs">
         
-        {/* LEFT SIDE: User Profile Icon & Bell Notification */}
+        {/* LEFT SIDE: User Profile & Search */}
         <div className="flex items-center gap-3">
           {currentUser && (
             <button 
@@ -71,7 +89,7 @@ export default function Navbar() {
             </button>
           )}
 
-          {/* Bell Notification Dropdown */}
+          {/* Notifications */}
           <div className="relative">
             <button 
               onClick={() => setIsNotifOpen(!isNotifOpen)}
@@ -120,7 +138,7 @@ export default function Navbar() {
           />
         </div>
 
-        {/* RIGHT SIDE: Priority Filter, View Switchers & Actions */}
+        {/* RIGHT SIDE: Filters, Views & Export Options */}
         <div className="flex items-center gap-3">
           <select 
             value={filterPriority} 
@@ -133,7 +151,7 @@ export default function Navbar() {
             <option value="medium">🟢 Medium</option>
           </select>
 
-          {/* Views Engine */}
+          {/* Views Tabs */}
           <div className="bg-slate-100 p-1 rounded-xl flex border border-slate-200 shadow-2xs">
             <button onClick={() => dispatch(setActiveView('kanban'))} className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${activeView === 'kanban' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'}`}>
               Kanban
@@ -153,9 +171,15 @@ export default function Navbar() {
             + New Task
           </button>
 
-          <button onClick={handleExportJSON} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer">
-            Export
-          </button>
+          {/* PDF & JSON Export Actions */}
+          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+            <button onClick={handleExportPDF} className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl font-bold cursor-pointer transition-all shadow-2xs" title="Save workspace as PDF">
+              📄 Export PDF
+            </button>
+            <button onClick={handleExportJSON} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer transition-all shadow-2xs" title="Backup JSON">
+              Backup JSON
+            </button>
+          </div>
         </div>
       </header>
 

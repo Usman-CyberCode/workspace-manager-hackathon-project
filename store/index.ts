@@ -1,5 +1,5 @@
 import { configureStore, createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { INITIAL_USERS, INITIAL_WORKSPACES, INITIAL_PROJECTS, INITIAL_TASKS } from '@/lib/mockdata';
+import { INITIAL_USERS, INITIAL_WORKSPACES, INITIAL_PROJECTS, INITIAL_TASKS } from '../lib/mockdata';
 
 export interface User {
   id: string;
@@ -9,40 +9,10 @@ export interface User {
   avatar: string;
 }
 
-export interface Subtask {
-  id: string;
-  title: string;
-  completed: boolean;
-}
-
-export interface CommentItem {
-  id: string;
-  author: string;
-  text: string;
-  time: string;
-}
-
-export interface Attachment {
-  name: string;
-  url: string;
-}
-
-export interface Task {
-  id: string;
-  projectId: string;
-  title: string;
-  description: string;
-  status: string;
-  priority: string;
-  dueDate: string;
-  comments?: CommentItem[];
-  subtasks?: Subtask[];
-  attachments?: Attachment[];
-}
-
 export interface Project {
   id: string;
   workspaceId: string;
+  userId?: string; // Associated user ID
   name: string;
   color: string;
 }
@@ -59,35 +29,33 @@ const loadState = () => {
 
 const savedState = loadState();
 
-// 2 Extra Dummy Projects Added Here
-const EXTENDED_PROJECTS: Project[] = [
-  ...INITIAL_PROJECTS,
-  { id: 'proj-3', workspaceId: 'ws-1', name: 'Backend API Engine', color: 'bg-emerald-500' },
-  { id: 'proj-4', workspaceId: 'ws-1', name: 'Mobile App UI Kit', color: 'bg-purple-500' }
-];
-
 const authSlice = createSlice({
   name: 'auth',
   initialState: savedState?.auth || {
-    currentUser: (INITIAL_USERS?.[0] as User) || null,
+    currentUser: null as User | null,
     users: (INITIAL_USERS as User[]) || [],
-    isAuthenticated: true
+    isAuthenticated: false,
+    pendingVerificationEmail: null as string | null
   },
   reducers: {
-    login: (state, action: PayloadAction<{ email: string }>) => {
-      const user = state.users.find((u: User) => u.email.toLowerCase() === action.payload.email.toLowerCase());
-      if (user) {
-        state.currentUser = user;
-        state.isAuthenticated = true;
+    setPendingEmail: (state, action: PayloadAction<string>) => {
+      state.pendingVerificationEmail = action.payload;
+    },
+    verifyAndLogin: (state, action: PayloadAction<{ email: string }>) => {
+      let user = state.users.find((u: User) => u.email.toLowerCase() === action.payload.email.toLowerCase());
+      if (!user) {
+        user = {
+          id: `user-${Date.now()}`,
+          name: action.payload.email.split('@')[0],
+          email: action.payload.email,
+          role: 'admin',
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${action.payload.email}`
+        };
+        state.users.push(user);
       }
-    },
-    logout: (state) => {
-      state.currentUser = null as unknown as User;
-      state.isAuthenticated = false;
-    },
-    switchUser: (state, action: PayloadAction<string>) => {
-      const user = state.users.find((u: User) => u.id === action.payload);
-      if (user) state.currentUser = user;
+      state.currentUser = user;
+      state.isAuthenticated = true;
+      state.pendingVerificationEmail = null;
     },
     updateProfile: (state, action: PayloadAction<{ name: string; email: string }>) => {
       if (state.currentUser) {
@@ -99,6 +67,22 @@ const authSlice = createSlice({
           state.users[index].email = action.payload.email;
         }
       }
+    },
+    deleteUser: (state, action: PayloadAction<string>) => {
+      state.users = state.users.filter((u: User) => u.id !== action.payload);
+      if (state.currentUser?.id === action.payload) {
+        state.currentUser = state.users[0] || null;
+        if (!state.currentUser) state.isAuthenticated = false;
+      }
+    },
+    logout: (state) => {
+      state.currentUser = null;
+      state.isAuthenticated = false;
+      state.pendingVerificationEmail = null;
+    },
+    switchUser: (state, action: PayloadAction<string>) => {
+      const user = state.users.find((u: User) => u.id === action.payload);
+      if (user) state.currentUser = user;
     }
   }
 });
@@ -108,7 +92,7 @@ const workspaceSlice = createSlice({
   initialState: savedState?.workspace || {
     workspaces: INITIAL_WORKSPACES || [],
     activeWorkspaceId: 'ws-1',
-    projects: EXTENDED_PROJECTS,
+    projects: INITIAL_PROJECTS || [],
     activeProjectId: 'proj-1'
   },
   reducers: {
@@ -121,124 +105,52 @@ const workspaceSlice = createSlice({
 const taskSlice = createSlice({
   name: 'tasks',
   initialState: savedState?.tasks || {
-    items: (INITIAL_TASKS as Task[]) || [],
-    pastHistory: [] as Task[][],
-    futureHistory: [] as Task[][],
+    items: INITIAL_TASKS || [],
+    pastHistory: [],
+    futureHistory: [],
     activeView: 'kanban',
     searchQuery: '',
     filterPriority: 'all',
-    selectedTaskId: null as string | null,
-    notifications: [
-      { id: '1', text: 'Sarah Admin assigned a new task to you', time: '10:30 AM' },
-      { id: '2', text: 'Alex Owner mentioned you in Sprint Launch', time: '11:15 AM' }
-    ] as Array<{ id: string; text: string; time: string }>
+    selectedTaskId: null,
+    notifications: []
   },
   reducers: {
     setActiveView: (state, action: PayloadAction<string>) => { state.activeView = action.payload; },
     setSearchQuery: (state, action: PayloadAction<string>) => { state.searchQuery = action.payload; },
     setFilterPriority: (state, action: PayloadAction<string>) => { state.filterPriority = action.payload; },
     setSelectedTaskId: (state, action: PayloadAction<string | null>) => { state.selectedTaskId = action.payload; },
-
-    addTask: (state, action: PayloadAction<Task>) => {
-      state.pastHistory.push(JSON.parse(JSON.stringify(state.items)));
-      state.futureHistory = [];
-      state.items.push(action.payload);
-    },
-    updateTask: (state, action: PayloadAction<Partial<Task> & { id: string }>) => {
-      const index = state.items.findIndex((t: Task) => t.id === action.payload.id);
-      if (index !== -1) {
-        state.pastHistory.push(JSON.parse(JSON.stringify(state.items)));
-        state.futureHistory = [];
-        state.items[index] = { ...state.items[index], ...action.payload };
-      }
-    },
     updateTaskStatus: (state, action: PayloadAction<{ id: string; status: string }>) => {
-      const task = state.items.find((t: Task) => t.id === action.payload.id);
-      if (task) {
-        state.pastHistory.push(JSON.parse(JSON.stringify(state.items)));
-        state.futureHistory = [];
-        task.status = action.payload.status;
-      }
+      const task = state.items.find((t: any) => t.id === action.payload.id);
+      if (task) task.status = action.payload.status;
     },
     updateTaskPriority: (state, action: PayloadAction<{ id: string; priority: string }>) => {
-      const task = state.items.find((t: Task) => t.id === action.payload.id);
-      if (task) {
-        state.pastHistory.push(JSON.parse(JSON.stringify(state.items)));
-        state.futureHistory = [];
-        task.priority = action.payload.priority;
-      }
+      const task = state.items.find((t: any) => t.id === action.payload.id);
+      if (task) task.priority = action.payload.priority;
     },
     deleteTask: (state, action: PayloadAction<string>) => {
-      state.pastHistory.push(JSON.parse(JSON.stringify(state.items)));
-      state.futureHistory = [];
-      state.items = state.items.filter((t: Task) => t.id !== action.payload);
+      state.items = state.items.filter((t: any) => t.id !== action.payload);
     },
-    toggleSubtask: (state, action: PayloadAction<{ taskId: string; subtaskId: string }>) => {
-      const task = state.items.find((t: Task) => t.id === action.payload.taskId);
-      if (task && task.subtasks) {
-        const sub = task.subtasks.find((s: Subtask) => s.id === action.payload.subtaskId);
-        if (sub) sub.completed = !sub.completed;
-      }
+    addTask: (state, action: PayloadAction<any>) => {
+      state.items.push(action.payload);
     },
-    convertSubtaskToTask: (state, action: PayloadAction<{ taskId: string; subtaskId: string }>) => {
-      const task = state.items.find((t: Task) => t.id === action.payload.taskId);
-      if (task && task.subtasks) {
-        const subIndex = task.subtasks.findIndex((s: Subtask) => s.id === action.payload.subtaskId);
-        if (subIndex !== -1) {
-          const sub = task.subtasks[subIndex];
-          task.subtasks.splice(subIndex, 1);
-          state.items.push({
-            id: Date.now().toString(),
-            projectId: task.projectId,
-            title: sub.title,
-            description: `Converted from subtask of "${task.title}"`,
-            status: task.status,
-            priority: 'medium',
-            dueDate: new Date().toISOString().split('T')[0],
-            subtasks: []
-          });
-        }
-      }
-    },
-    addComment: (state, action: PayloadAction<{ taskId: string; comment: CommentItem }>) => {
-      const task = state.items.find((t: Task) => t.id === action.payload.taskId);
+    addComment: (state, action: PayloadAction<{ taskId: string; comment: any }>) => {
+      const task = state.items.find((t: any) => t.id === action.payload.taskId);
       if (task) {
         if (!task.comments) task.comments = [];
         task.comments.push(action.payload.comment);
       }
     },
-    clearNotifications: (state) => { state.notifications = []; },
-    undo: (state) => {
-      if (state.pastHistory.length > 0) {
-        const prev = state.pastHistory.pop();
-        if (prev) {
-          state.futureHistory.push(JSON.parse(JSON.stringify(state.items)));
-          state.items = prev;
-        }
-      }
-    },
-    redo: (state) => {
-      if (state.futureHistory.length > 0) {
-        const next = state.futureHistory.pop();
-        if (next) {
-          state.pastHistory.push(JSON.parse(JSON.stringify(state.items)));
-          state.items = next;
-        }
-      }
-    },
-    importStateData: (state, action: PayloadAction<{ tasks?: { items?: Task[] } }>) => {
-      if (action.payload?.tasks?.items) state.items = action.payload.tasks.items;
-    }
+    undo: (state) => {},
+    redo: (state) => {},
+    clearNotifications: (state) => { state.notifications = []; }
   }
 });
 
-export const { login, logout, switchUser, updateProfile } = authSlice.actions;
+export const { setPendingEmail, verifyAndLogin, updateProfile, deleteUser, logout, switchUser } = authSlice.actions;
 export const { setActiveWorkspace, setActiveProject, addProject } = workspaceSlice.actions;
 export const { 
-  addTask, updateTask, updateTaskStatus, updateTaskPriority, deleteTask, 
-  toggleSubtask, convertSubtaskToTask, addComment,
-  setActiveView, setSearchQuery, setFilterPriority, setSelectedTaskId,
-  clearNotifications, undo, redo, importStateData 
+  setActiveView, setSearchQuery, setFilterPriority, setSelectedTaskId, 
+  updateTaskStatus, updateTaskPriority, deleteTask, addTask, addComment, undo, redo, clearNotifications 
 } = taskSlice.actions;
 
 export const store = configureStore({
