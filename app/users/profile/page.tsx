@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, addProject, deleteUser, logout } from '@/store';
+import { RootState, createProject, deleteUser, logout } from '@/store';
 
 export default function UserProfilePage() {
   const router = useRouter();
@@ -40,12 +40,14 @@ export default function UserProfilePage() {
   const handleCreateUserProject = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProjName.trim()) return;
-    dispatch(addProject({
-      id: `proj-${Date.now()}`,
+    dispatch(createProject({
       workspaceId: activeWorkspaceId,
-      userId: currentUser.id,
       name: newProjName,
-      color: 'bg-indigo-500'
+      description: 'Personal user project',
+      color: 'bg-indigo-600',
+      icon: '📁',
+      members: [currentUser.id],
+      archived: false
     }));
     setNewProjName('');
   };

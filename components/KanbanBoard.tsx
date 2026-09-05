@@ -4,22 +4,28 @@ import { useSelector, useDispatch } from 'react-redux';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { 
   RootState, updateTaskStatus, updateTaskPriority, deleteTask, 
-  undo, redo, setSelectedTaskId 
+  duplicateTask, setSelectedTaskId, toggleSelectTask, addToast, 
+  setActiveModal 
 } from '@/store';
+import TableView from './TableView';
+import CalendarView from './CalendarView';
+import ListView from './ListView';
+import { TaskItem, MockUser, Project, Workspace, Subtask } from '@/lib/mockdata';
 
 export default function KanbanBoard() {
+  const dispatch = useDispatch();
+  const state = useSelector((state: RootState) => state);
   const { 
     items: tasks = [], 
-    pastHistory = [], 
-    futureHistory = [], 
     activeView = 'kanban', 
     searchQuery = '', 
-    filterPriority = 'all' 
-  } = useSelector((state: RootState) => state.tasks) || {};
-
-  const activeProjectId = useSelector((state: RootState) => state.workspace.activeProjectId);
-  const currentUser = useSelector((state: RootState) => state.auth.currentUser);
-  const dispatch = useDispatch();
+    filterPriority = 'all', 
+    filterStatus = 'all',
+    selectedTaskIds = [] 
+  } = state.tasks;
+  
+  const { activeWorkspaceId, workspaces = [], activeProjectId, projects = [] } = state.workspace;
+  const { currentUser, users = [] } = state.auth;
 
   const [mounted, setMounted] = useState(false);
 
@@ -29,255 +35,190 @@ export default function KanbanBoard() {
 
   if (!mounted) return null;
 
+  const activeWorkspace = workspaces.find((w: Workspace) => w.id === activeWorkspaceId);
+  const activeProject = projects.find((p: Project) => p.id === activeProjectId);
   const isViewer = currentUser?.role === 'viewer';
 
-  const filteredTasks = tasks.filter((t: any) => {
+  // Filter tasks for active project and search/priority filters
+  const filteredTasks = tasks.filter((t: TaskItem) => {
     const matchesProject = t.projectId === activeProjectId;
-    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          t.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesPriority = filterPriority === 'all' || t.priority === filterPriority;
-    return matchesProject && matchesSearch && matchesPriority;
+    const matchesStatus = filterStatus === 'all' || t.status === filterStatus;
+    return matchesProject && matchesSearch && matchesPriority && matchesStatus;
   });
 
   const onDragEnd = (result: any) => {
-    if (!result.destination || isViewer) return;
-    dispatch(updateTaskStatus({ id: result.draggableId, status: result.destination.droppableId }));
+    if (!result.destination) return;
+    if (isViewer) {
+      dispatch(addToast({ message: 'Access Denied: Viewers cannot move tasks.', type: 'error' }));
+      return;
+    }
+    const { draggableId, destination } = result;
+    dispatch(updateTaskStatus({ 
+      id: draggableId, 
+      status: destination.droppableId as TaskItem['status'] 
+    }));
   };
 
+  const todoTasks = filteredTasks.filter((t: TaskItem) => t.status === 'todo');
+  const inProgressTasks = filteredTasks.filter((t: TaskItem) => t.status === 'in-progress');
+  const doneTasks = filteredTasks.filter((t: TaskItem) => t.status === 'done');
+
   return (
-    <div className="w-full max-w-7xl mx-auto font-sans">
+    <div className="w-full max-w-7xl mx-auto font-sans pb-16">
       
-      {/* Top Controls Bar */}
-      <div className="flex justify-between items-center mb-6 border-b border-slate-200 pb-4">
+      {/* Print-Only Header (visible only during window.print()) */}
+      <div className="print-only-header">
+        <h1 className="text-2xl font-black text-slate-900">Dev on Workspace Report</h1>
+        <p className="text-xs text-slate-600 mt-1">
+          Workspace: <strong>{activeWorkspace?.name}</strong> • Project: <strong>{activeProject?.name}</strong> • Date: {new Date().toLocaleDateString()}
+        </p>
+        <p className="text-xs text-slate-500 mt-0.5">
+          Total Tasks: {filteredTasks.length} (To Do: {todoTasks.length} | In Progress: {inProgressTasks.length} | Completed: {doneTasks.length})
+        </p>
+      </div>
+
+      {/* Board Subheader */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200/80 no-print">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Dev on Workspace</h2>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Project task execution board</p>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+              {activeProject?.name || 'Sprint Launch'}
+            </h2>
+            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-[10px] font-extrabold uppercase">
+              {filteredTasks.length} Tasks
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            {activeProject?.description || 'Active sprint workspace execution board'}
+          </p>
         </div>
 
-        {/* Clean Undo / Redo Buttons (without '0') */}
+        {/* Quick Filter Info & Actions */}
         <div className="flex items-center gap-2">
-          <button 
-            onClick={() => dispatch(undo())} 
-            disabled={(pastHistory?.length || 0) === 0}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-              (pastHistory?.length || 0) > 0 
-                ? 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100 cursor-pointer shadow-2xs' 
-                : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60'
-            }`}
-          >
-            ↩️ Undo {(pastHistory?.length || 0) > 0 ? `(${pastHistory.length})` : ''}
-          </button>
+          {searchQuery && (
+            <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-xl font-medium">
+              Filtering by: "{searchQuery}"
+            </span>
+          )}
 
-          <button 
-            onClick={() => dispatch(redo())} 
-            disabled={(futureHistory?.length || 0) === 0}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-              (futureHistory?.length || 0) > 0 
-                ? 'bg-blue-50 border-blue-300 text-blue-800 hover:bg-blue-100 cursor-pointer shadow-2xs' 
-                : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60'
-            }`}
-          >
-            ↪️ Redo {(futureHistory?.length || 0) > 0 ? `(${futureHistory.length})` : ''}
-          </button>
+          {!isViewer && (
+            <button
+              onClick={() => dispatch(setActiveModal('newTask'))}
+              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
+            >
+              <span>+</span>
+              <span>Add Task</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* KANBAN BOARD VIEW */}
+      {/* RENDER VIEWS */}
+
+      {/* 1. KANBAN BOARD VIEW */}
       {activeView === 'kanban' && (
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="kanban-grid grid grid-cols-1 md:grid-cols-3 gap-5">
             
-            {/* 1. TO DO COLUMN (YELLOW TOP BAR) */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden min-h-[500px] flex flex-col shadow-xs" style={{ borderTop: '6px solid #eab308' }}>
+            {/* COLUMN 1: TO DO (Yellow Accent #f59e0b) */}
+            <div 
+              className="kanban-column bg-slate-50/80 rounded-2xl border border-slate-200/90 overflow-hidden min-h-[550px] flex flex-col shadow-2xs"
+              style={{ borderTop: '6px solid #f59e0b' }}
+            >
               <div className="p-4 flex-1 flex flex-col">
-                <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-200/70">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block" />
-                    <span className="font-extrabold text-xs uppercase tracking-wider text-slate-800">To Do</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
+                    <span className="font-black text-xs uppercase tracking-wider text-slate-800">To Do</span>
                   </div>
-                  <span className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 px-2 py-0.5 rounded-full font-bold">
-                    {filteredTasks.filter((t: any) => t.status === 'todo').length}
+                  <span className="text-[11px] bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full font-extrabold">
+                    {todoTasks.length}
                   </span>
                 </div>
 
                 <Droppable droppableId="todo">
                   {(provided) => (
                     <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3 flex-1">
-                      {filteredTasks.filter((t: any) => t.status === 'todo').map((task: any, index: number) => (
-                        <Draggable key={task.id} draggableId={task.id} index={index} isDragDisabled={isViewer}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              onClick={() => dispatch(setSelectedTaskId(task.id))}
-                              className={`bg-slate-50 p-3.5 rounded-xl border border-slate-200 shadow-2xs hover:shadow-md transition-all cursor-pointer ${
-                                snapshot.isDragging ? 'rotate-1 scale-102 ring-2 ring-blue-500 shadow-xl' : ''
-                              }`}
-                            >
-                              <div className="flex justify-between items-start gap-2">
-                                <h4 className="font-bold text-xs text-slate-900 leading-snug">{task.title}</h4>
-                                <select 
-                                  value={task.priority}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onChange={(e) => dispatch(updateTaskPriority({ id: task.id, priority: e.target.value }))}
-                                  className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-white text-slate-800 border border-slate-200 outline-none cursor-pointer"
-                                >
-                                  <option value="urgent">🔴 Urgent</option>
-                                  <option value="high">🟡 High</option>
-                                  <option value="medium">🟢 Medium</option>
-                                </select>
-                              </div>
-                              <p className="text-[11px] text-slate-500 mt-1.5 line-clamp-2">{task.description}</p>
-                              {task.comments?.length > 0 && (
-                                <div className="mt-2.5 pt-2 border-t border-slate-200/60 text-[10px] font-bold text-blue-600 flex items-center gap-1">
-                                  💬 {task.comments.length} comment(s)
-                                </div>
-                              )}
-                              <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
-                                <span className="text-slate-400 font-medium">📅 {task.dueDate}</span>
-                                {!isViewer && (
-                                  <button onClick={(e) => { e.stopPropagation(); dispatch(deleteTask(task.id)); }} className="text-red-500 hover:text-red-700 font-bold text-[10px] cursor-pointer">
-                                    Delete
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
+                      {todoTasks.map((task: TaskItem, index: number) => (
+                        <TaskCard key={task.id} task={task} index={index} isViewer={isViewer} />
                       ))}
                       {provided.placeholder}
+                      {todoTasks.length === 0 && (
+                        <div className="h-32 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-xs text-slate-400 font-medium italic">
+                          Drop tasks here
+                        </div>
+                      )}
                     </div>
                   )}
                 </Droppable>
               </div>
             </div>
 
-            {/* 2. IN PROGRESS COLUMN (GREEN TOP BAR) */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden min-h-[500px] flex flex-col shadow-xs" style={{ borderTop: '6px solid #22c55e' }}>
+            {/* COLUMN 2: IN PROGRESS (Green Accent #10b981) */}
+            <div 
+              className="kanban-column bg-slate-50/80 rounded-2xl border border-slate-200/90 overflow-hidden min-h-[550px] flex flex-col shadow-2xs"
+              style={{ borderTop: '6px solid #10b981' }}
+            >
               <div className="p-4 flex-1 flex flex-col">
-                <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-200/70">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
-                    <span className="font-extrabold text-xs uppercase tracking-wider text-slate-800">In Progress</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+                    <span className="font-black text-xs uppercase tracking-wider text-slate-800">In Progress</span>
                   </div>
-                  <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-bold">
-                    {filteredTasks.filter((t: any) => t.status === 'in-progress').length}
+                  <span className="text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-extrabold">
+                    {inProgressTasks.length}
                   </span>
                 </div>
 
                 <Droppable droppableId="in-progress">
                   {(provided) => (
                     <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3 flex-1">
-                      {filteredTasks.filter((t: any) => t.status === 'in-progress').map((task: any, index: number) => (
-                        <Draggable key={task.id} draggableId={task.id} index={index} isDragDisabled={isViewer}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              onClick={() => dispatch(setSelectedTaskId(task.id))}
-                              className={`bg-slate-50 p-3.5 rounded-xl border border-slate-200 shadow-2xs hover:shadow-md transition-all cursor-pointer ${
-                                snapshot.isDragging ? 'rotate-1 scale-102 ring-2 ring-blue-500 shadow-xl' : ''
-                              }`}
-                            >
-                              <div className="flex justify-between items-start gap-2">
-                                <h4 className="font-bold text-xs text-slate-900 leading-snug">{task.title}</h4>
-                                <select 
-                                  value={task.priority}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onChange={(e) => dispatch(updateTaskPriority({ id: task.id, priority: e.target.value }))}
-                                  className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-white text-slate-800 border border-slate-200 outline-none cursor-pointer"
-                                >
-                                  <option value="urgent">🔴 Urgent</option>
-                                  <option value="high">🟡 High</option>
-                                  <option value="medium">🟢 Medium</option>
-                                </select>
-                              </div>
-                              <p className="text-[11px] text-slate-500 mt-1.5 line-clamp-2">{task.description}</p>
-                              {task.comments?.length > 0 && (
-                                <div className="mt-2.5 pt-2 border-t border-slate-200/60 text-[10px] font-bold text-blue-600 flex items-center gap-1">
-                                  💬 {task.comments.length} comment(s)
-                                </div>
-                              )}
-                              <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
-                                <span className="text-slate-400 font-medium">📅 {task.dueDate}</span>
-                                {!isViewer && (
-                                  <button onClick={(e) => { e.stopPropagation(); dispatch(deleteTask(task.id)); }} className="text-red-500 hover:text-red-700 font-bold text-[10px] cursor-pointer">
-                                    Delete
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
+                      {inProgressTasks.map((task: TaskItem, index: number) => (
+                        <TaskCard key={task.id} task={task} index={index} isViewer={isViewer} />
                       ))}
                       {provided.placeholder}
+                      {inProgressTasks.length === 0 && (
+                        <div className="h-32 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-xs text-slate-400 font-medium italic">
+                          Drop tasks here
+                        </div>
+                      )}
                     </div>
                   )}
                 </Droppable>
               </div>
             </div>
 
-            {/* 3. COMPLETED COLUMN (RED TOP BAR) */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden min-h-[500px] flex flex-col shadow-xs" style={{ borderTop: '6px solid #ef4444' }}>
+            {/* COLUMN 3: COMPLETED (Red Accent #f43f5e) */}
+            <div 
+              className="kanban-column bg-slate-50/80 rounded-2xl border border-slate-200/90 overflow-hidden min-h-[550px] flex flex-col shadow-2xs"
+              style={{ borderTop: '6px solid #f43f5e' }}
+            >
               <div className="p-4 flex-1 flex flex-col">
-                <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-200/70">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
-                    <span className="font-extrabold text-xs uppercase tracking-wider text-slate-800">Completed</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />
+                    <span className="font-black text-xs uppercase tracking-wider text-slate-800">Completed</span>
                   </div>
-                  <span className="text-xs bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-full font-bold">
-                    {filteredTasks.filter((t: any) => t.status === 'done').length}
+                  <span className="text-[11px] bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-full font-extrabold">
+                    {doneTasks.length}
                   </span>
                 </div>
 
                 <Droppable droppableId="done">
                   {(provided) => (
                     <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3 flex-1">
-                      {filteredTasks.filter((t: any) => t.status === 'done').map((task: any, index: number) => (
-                        <Draggable key={task.id} draggableId={task.id} index={index} isDragDisabled={isViewer}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              onClick={() => dispatch(setSelectedTaskId(task.id))}
-                              className={`bg-slate-50 p-3.5 rounded-xl border border-slate-200 shadow-2xs hover:shadow-md transition-all cursor-pointer ${
-                                snapshot.isDragging ? 'rotate-1 scale-102 ring-2 ring-blue-500 shadow-xl' : ''
-                              }`}
-                            >
-                              <div className="flex justify-between items-start gap-2">
-                                <h4 className="font-bold text-xs text-slate-900 leading-snug">{task.title}</h4>
-                                <select 
-                                  value={task.priority}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onChange={(e) => dispatch(updateTaskPriority({ id: task.id, priority: e.target.value }))}
-                                  className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-white text-slate-800 border border-slate-200 outline-none cursor-pointer"
-                                >
-                                  <option value="urgent">🔴 Urgent</option>
-                                  <option value="high">🟡 High</option>
-                                  <option value="medium">🟢 Medium</option>
-                                </select>
-                              </div>
-                              <p className="text-[11px] text-slate-500 mt-1.5 line-clamp-2">{task.description}</p>
-                              {task.comments?.length > 0 && (
-                                <div className="mt-2.5 pt-2 border-t border-slate-200/60 text-[10px] font-bold text-blue-600 flex items-center gap-1">
-                                  💬 {task.comments.length} comment(s)
-                                </div>
-                              )}
-                              <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
-                                <span className="text-slate-400 font-medium">📅 {task.dueDate}</span>
-                                {!isViewer && (
-                                  <button onClick={(e) => { e.stopPropagation(); dispatch(deleteTask(task.id)); }} className="text-red-500 hover:text-red-700 font-bold text-[10px] cursor-pointer">
-                                    Delete
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
+                      {doneTasks.map((task: TaskItem, index: number) => (
+                        <TaskCard key={task.id} task={task} index={index} isViewer={isViewer} />
                       ))}
                       {provided.placeholder}
+                      {doneTasks.length === 0 && (
+                        <div className="h-32 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-xs text-slate-400 font-medium italic">
+                          Drop tasks here
+                        </div>
+                      )}
                     </div>
                   )}
                 </Droppable>
@@ -288,77 +229,151 @@ export default function KanbanBoard() {
         </DragDropContext>
       )}
 
-      {/* TABLE VIEW */}
-      {activeView === 'table' && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden text-xs shadow-xs">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b bg-slate-100 text-slate-600 uppercase font-bold">
-                <th className="p-4">Title</th>
-                <th className="p-4">Status</th>
-                <th className="p-4">Priority</th>
-                <th className="p-4">Due Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredTasks.map((t: any) => (
-                <tr key={t.id} onClick={() => dispatch(setSelectedTaskId(t.id))} className="hover:bg-slate-50 cursor-pointer">
-                  <td className="p-4 font-bold text-slate-900">{t.title}</td>
-                  <td className="p-4 capitalize font-semibold text-slate-600">{t.status}</td>
-                  <td className="p-4 uppercase font-bold">{t.priority}</td>
-                  <td className="p-4 text-slate-500">{t.dueDate}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* 2. TABLE VIEW */}
+      {activeView === 'table' && <TableView />}
 
-      {/* CALENDAR VIEW */}
-      {activeView === 'calendar' && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 text-xs shadow-xs">
-          <h3 className="font-bold mb-4 text-slate-900 text-sm">Calendar Overview</h3>
-          <div className="grid grid-cols-7 gap-2 text-center font-bold text-slate-400 mb-2">
-            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-          </div>
-          <div className="grid grid-cols-7 gap-2">
-            {Array.from({ length: 31 }).map((_, i) => {
-              const dayStr = `2026-09-${(i + 1).toString().padStart(2, '0')}`;
-              const dayTasks = filteredTasks.filter((t: any) => t.dueDate === dayStr);
-              return (
-                <div key={i} className="min-h-[90px] border border-slate-200 rounded-xl p-2 bg-slate-50">
-                  <span className="text-[10px] font-bold text-slate-400">{i + 1}</span>
-                  {dayTasks.map((t: any) => (
-                    <div key={t.id} onClick={() => dispatch(setSelectedTaskId(t.id))} className="bg-blue-600 text-white text-[10px] p-1 rounded mt-1 truncate cursor-pointer font-bold">
-                      {t.title}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* 3. CALENDAR VIEW */}
+      {activeView === 'calendar' && <CalendarView />}
 
-      {/* LIST VIEW */}
-      {activeView === 'list' && (
-        <div className="space-y-3 max-w-4xl">
-          {filteredTasks.map((task: any) => (
-            <div key={task.id} onClick={() => dispatch(setSelectedTaskId(task.id))} className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs hover:shadow-md transition-all cursor-pointer flex justify-between items-center">
-              <div>
-                <h4 className="font-bold text-sm text-slate-900">{task.title}</h4>
-                <p className="text-xs text-slate-500 mt-0.5">{task.description}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="px-2.5 py-1 bg-slate-100 font-bold text-xs rounded-lg uppercase">{task.priority}</span>
-                <button onClick={(e) => { e.stopPropagation(); dispatch(setSelectedTaskId(task.id)); }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs cursor-pointer">
-                  Display Modal
+      {/* 4. LIST VIEW */}
+      {activeView === 'list' && <ListView />}
+
+    </div>
+  );
+}
+
+// Minimalist Notion-Style Task Card Component
+function TaskCard({ task, index, isViewer }: { task: TaskItem; index: number; isViewer: boolean }) {
+  const dispatch = useDispatch();
+  const users = useSelector((state: RootState) => state.auth.users);
+  const selectedTaskIds = useSelector((state: RootState) => state.tasks.selectedTaskIds);
+  const isSelected = selectedTaskIds.includes(task.id);
+
+  const assignee = users.find((u: MockUser) => u.id === task.assigneeId);
+  const subtaskCount = task.subtasks?.length || 0;
+  const completedSubtasks = task.subtasks?.filter((s: Subtask) => s.completed).length || 0;
+  const progressPercent = subtaskCount > 0 ? (completedSubtasks / subtaskCount) * 100 : 0;
+
+  return (
+    <Draggable draggableId={task.id} index={index} isDragDisabled={isViewer}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          onClick={() => dispatch(setSelectedTaskId(task.id))}
+          className={`kanban-card group bg-white p-4 rounded-2xl border transition-all cursor-pointer ${
+            isSelected 
+              ? 'border-blue-500 bg-blue-50/20 shadow-md ring-1 ring-blue-500' 
+              : 'border-slate-200/90 hover:border-slate-300 shadow-2xs hover:shadow-md'
+          } ${snapshot.isDragging ? 'rotate-1 scale-102 ring-2 ring-blue-500 shadow-2xl z-50' : ''}`}
+        >
+          {/* Card Top Row: Checkbox, Priority Badge, Quick Actions */}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onClick={(e) => e.stopPropagation()}
+                onChange={() => dispatch(toggleSelectTask(task.id))}
+                className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer w-3.5 h-3.5"
+              />
+              <span className={`text-[9px] uppercase font-black px-1.5 py-0.5 rounded-md ${
+                task.priority === 'urgent' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                task.priority === 'high' ? 'bg-amber-50 text-amber-800 border border-amber-200' :
+                task.priority === 'medium' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
+                'bg-slate-100 text-slate-600 border border-slate-200'
+              }`}>
+                {task.priority}
+              </span>
+            </div>
+
+            {/* Quick Action Buttons */}
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity no-print">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dispatch(duplicateTask(task.id));
+                  dispatch(addToast({ message: 'Task duplicated successfully!', type: 'info' }));
+                }}
+                className="text-slate-400 hover:text-slate-800 p-1 text-xs"
+                title="Duplicate task"
+              >
+                📋
+              </button>
+              {!isViewer && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    dispatch(deleteTask(task.id));
+                    dispatch(addToast({ message: 'Task deleted.', type: 'info' }));
+                  }}
+                  className="text-slate-400 hover:text-rose-600 p-1 text-xs font-bold"
+                  title="Delete task"
+                >
+                  ✕
                 </button>
+              )}
+            </div>
+          </div>
+
+          {/* Title */}
+          <h4 className="font-extrabold text-xs text-slate-900 leading-snug mb-1 group-hover:text-blue-600 transition-colors">
+            {task.title}
+          </h4>
+
+          {/* Description */}
+          {task.description && (
+            <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed mb-2.5">
+              {task.description}
+            </p>
+          )}
+
+          {/* Subtask Progress Bar */}
+          {subtaskCount > 0 && (
+            <div className="mb-2.5 pt-2 border-t border-slate-100">
+              <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 mb-1">
+                <span>Subtasks</span>
+                <span>{completedSubtasks}/{subtaskCount} ({Math.round(progressPercent)}%)</span>
+              </div>
+              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    progressPercent === 100 ? 'bg-emerald-500' : 'bg-blue-600'
+                  }`}
+                  style={{ width: `${progressPercent}%` }}
+                />
               </div>
             </div>
-          ))}
+          )}
+
+          {/* Bottom Card Footer: Date, Assignee, Comments, Attachments */}
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+            <div className="flex items-center gap-2">
+              <span>📅 {task.dueDate}</span>
+              {task.comments?.length > 0 && (
+                <span className="flex items-center gap-0.5 text-blue-600 font-bold" title="Comments">
+                  💬 {task.comments.length}
+                </span>
+              )}
+              {task.attachments?.length > 0 && (
+                <span className="text-slate-400" title="File attachments">
+                  📎 {task.attachments.length}
+                </span>
+              )}
+            </div>
+
+            {assignee && (
+              <img 
+                src={assignee.avatar} 
+                alt={assignee.name} 
+                className="w-5 h-5 rounded-full object-cover border border-slate-200"
+                title={`Assigned to ${assignee.name} (${assignee.role})`}
+              />
+            )}
+          </div>
         </div>
       )}
-    </div>
+    </Draggable>
   );
 }
