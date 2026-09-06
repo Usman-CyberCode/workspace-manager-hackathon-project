@@ -1,16 +1,46 @@
 'use client';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
   RootState, setActiveView, setSearchQuery, setFilterPriority, 
-  setFilterStatus, setFilterAssignee, setSortBy, setGroupBy, 
   setActiveModal, clearNotifications, markAsRead, markAllAsRead, 
   toggleOffline, toggleTheme, bulkUpdateStatus, bulkDeleteTasks, 
-  clearSelectedTasks, importTasks, addToast, undo, redo, NotificationItem, logout 
+  clearSelectedTasks, importTasks, addToast, undo, redo, NotificationItem, logout,
+  setCommandPaletteOpen
 } from '@/store';
 import UserProfileModal from '@/components/UserProfileModal';
 import { Workspace, Project, TaskItem, MockUser } from '@/lib/mockdata';
-import { LogOut } from 'lucide-react';
+import { 
+  Menu, 
+  Kanban, 
+  Table, 
+  Calendar, 
+  ListTodo, 
+  Search, 
+  SlidersHorizontal, 
+  Plus, 
+  Download, 
+  Upload, 
+  Undo2, 
+  Redo2, 
+  Bell, 
+  Sun, 
+  Moon, 
+  Wifi, 
+  WifiOff, 
+  RefreshCw, 
+  MoreHorizontal, 
+  LogOut, 
+  FileText, 
+  Keyboard, 
+  Activity, 
+  ChevronDown, 
+  User, 
+  Check, 
+  Trash2,
+  X,
+  Settings
+} from 'lucide-react';
 
 interface NavbarProps {
   onToggleMobileSidebar?: () => void;
@@ -19,17 +49,24 @@ interface NavbarProps {
 export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
   const dispatch = useDispatch();
   const state = useSelector((state: RootState) => state);
-  const { activeView, searchQuery, filterPriority, filterStatus, sortBy, groupBy, selectedTaskIds = [], pastHistory, futureHistory } = state.tasks;
-  const { currentUser, users = [] } = state.auth;
+  const { activeView, searchQuery, filterPriority, selectedTaskIds = [], pastHistory, futureHistory } = state.tasks;
+  const { currentUser } = state.auth;
   const { workspaces = [], activeWorkspaceId, projects = [], activeProjectId } = state.workspace;
   const { items: notifications = [] } = state.notifications;
   const { isOffline, theme } = state.ui;
 
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
+  const [isMobileViewMenuOpen, setIsMobileViewMenuOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const toolsMenuRef = useRef<HTMLDivElement>(null);
+  const mobileViewMenuRef = useRef<HTMLDivElement>(null);
 
   const activeWorkspace = workspaces.find((w: Workspace) => w.id === activeWorkspaceId);
   const activeProject = projects.find((p: Project) => p.id === activeProjectId);
@@ -37,15 +74,39 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
 
   const isViewer = currentUser?.role === 'viewer';
 
+  // Close menus on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setIsUserMenuOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(target)) {
+        setIsNotifOpen(false);
+      }
+      if (toolsMenuRef.current && !toolsMenuRef.current.contains(target)) {
+        setIsToolsMenuOpen(false);
+      }
+      if (mobileViewMenuRef.current && !mobileViewMenuRef.current.contains(target)) {
+        setIsMobileViewMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
   // Handle PDF Export
   const handleExportPDF = () => {
-    setIsExportMenuOpen(false);
-    window.print();
+    setIsToolsMenuOpen(false);
+    dispatch(addToast({ message: 'Generating clean PDF workspace layout...', type: 'info' }));
+    setTimeout(() => {
+      window.print();
+    }, 200);
   };
 
   // Handle JSON Backup Export
   const handleExportJSON = () => {
-    setIsExportMenuOpen(false);
+    setIsToolsMenuOpen(false);
     try {
       const backupData = {
         exportedAt: new Date().toISOString(),
@@ -95,128 +156,202 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
 
   // Manual Offline Sync Simulation
   const handleManualSync = () => {
+    setIsSyncing(true);
     dispatch(addToast({ message: 'Synchronizing local changes with cloud replica...', type: 'info' }));
     setTimeout(() => {
+      setIsSyncing(false);
       dispatch(addToast({ message: 'All workspace changes synced & validated.', type: 'success' }));
-    }, 900);
+    }, 800);
   };
+
+  const viewLabels: Record<string, { label: string; icon: any }> = {
+    kanban: { label: 'Kanban', icon: Kanban },
+    table: { label: 'Table', icon: Table },
+    calendar: { label: 'Calendar', icon: Calendar },
+    list: { label: 'List', icon: ListTodo },
+  };
+
+  const CurrentViewIcon = viewLabels[activeView]?.icon || Kanban;
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm border-b border-slate-200/90 dark:border-slate-800 px-3 sm:px-5 py-2 font-sans shadow-2xs transition-colors">
+      <header className="sticky top-0 z-20 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 px-2 sm:px-4 lg:px-6 py-2 font-sans shadow-2xs transition-colors select-none">
         
-        {/* Single Row: Everything Aligned in One Line */}
-        <div className="flex items-center justify-between gap-3 w-full">
+        {/* Main Navbar Row */}
+        <div className="flex items-center justify-between gap-2 sm:gap-3 w-full max-w-full">
           
-          {/* Left Group: Mobile Toggle, Breadcrumbs, and Notion Views */}
-          <div className="flex items-center gap-2.5 min-w-0 shrink-0">
+          {/* ==================================================== */}
+          {/* LEFT SECTION: Hamburger, Breadcrumbs, and View Tabs  */}
+          {/* ==================================================== */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 shrink">
+            
+            {/* Mobile Hamburger Toggle */}
             <button
               onClick={onToggleMobileSidebar}
-              className="md:hidden p-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100"
+              className="md:hidden p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors shrink-0 cursor-pointer"
+              title="Toggle sidebar menu"
+              aria-label="Toggle sidebar menu"
             >
-              ☰
+              <Menu className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold truncate max-w-[200px] xl:max-w-[260px]">
-              <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1 truncate">
-                <span>{activeWorkspace?.icon || '⚡'}</span>
+
+            {/* Breadcrumb: Workspace & Active Project */}
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-semibold min-w-0 shrink truncate">
+              <span className="font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 truncate max-w-[110px] sm:max-w-[160px]">
+                <span className="text-sm shrink-0">{activeWorkspace?.icon || '⚡'}</span>
                 <span className="truncate">{activeWorkspace?.name || 'Dev on Core'}</span>
               </span>
-              <span>/</span>
-              <span className="font-bold text-slate-900 dark:text-white truncate">
+              <span className="text-slate-300 dark:text-slate-600 shrink-0">/</span>
+              <span className="font-extrabold text-slate-900 dark:text-white truncate max-w-[100px] sm:max-w-[150px] bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-200/70 dark:border-slate-800/80">
                 {activeProject?.name || 'Sprint Launch'}
               </span>
             </div>
 
-            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block mx-1" />
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 hidden md:block shrink-0 mx-0.5" />
 
-            {/* Notion View Switcher Tabs */}
-            <div className="hidden sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs font-bold">
+            {/* View Switcher: Desktop Segmented Control (sm+) */}
+            <div className="hidden sm:flex items-center gap-0.5 bg-slate-100 dark:bg-slate-900 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs shrink-0">
               <button
                 onClick={() => dispatch(setActiveView('kanban'))}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeView === 'kanban' 
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs' 
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-xs' 
+                    : 'text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-white'
                 }`}
+                title="Kanban Board View (Key 1)"
               >
-                <span>📋</span>
-                <span>Kanban</span>
+                <Kanban className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Kanban</span>
               </button>
               <button
                 onClick={() => dispatch(setActiveView('table'))}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeView === 'table' 
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs' 
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-xs' 
+                    : 'text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-white'
                 }`}
+                title="Table Grid View (Key 2)"
               >
-                <span>📑</span>
-                <span>Table</span>
+                <Table className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Table</span>
               </button>
               <button
                 onClick={() => dispatch(setActiveView('calendar'))}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeView === 'calendar' 
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs' 
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-xs' 
+                    : 'text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-white'
                 }`}
+                title="Calendar Timeline View (Key 3)"
               >
-                <span>📅</span>
-                <span>Calendar</span>
+                <Calendar className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Calendar</span>
               </button>
               <button
                 onClick={() => dispatch(setActiveView('list'))}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeView === 'list' 
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs' 
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-xs' 
+                    : 'text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-white'
                 }`}
+                title="List View (Key 4)"
               >
-                <span>📄</span>
-                <span>List</span>
+                <ListTodo className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">List</span>
               </button>
             </div>
+
+            {/* View Switcher: Mobile Dropdown Button (<sm) */}
+            <div className="relative sm:hidden shrink-0" ref={mobileViewMenuRef}>
+              <button
+                onClick={() => setIsMobileViewMenuOpen(!isMobileViewMenuOpen)}
+                className="px-2 py-1 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1 transition-colors cursor-pointer"
+                title="Switch Workspace View"
+              >
+                <CurrentViewIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <span className="text-[11px]">{viewLabels[activeView]?.label}</span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </button>
+
+              {isMobileViewMenuOpen && (
+                <div className="absolute left-0 mt-1.5 w-36 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 shadow-xl z-50 animate-fadeIn text-xs">
+                  {(['kanban', 'table', 'calendar', 'list'] as const).map((viewKey) => {
+                    const ViewIcon = viewLabels[viewKey].icon;
+                    return (
+                      <button
+                        key={viewKey}
+                        onClick={() => {
+                          dispatch(setActiveView(viewKey));
+                          setIsMobileViewMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+                          activeView === viewKey 
+                            ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400' 
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        <ViewIcon className="w-3.5 h-3.5" />
+                        <span>{viewLabels[viewKey].label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
           </div>
 
-          {/* Right Group: Search, Filter, PDF, New Task, Undo/Redo, Notifications, Theme, Profile, Sign Out */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* ==================================================== */}
+          {/* RIGHT SECTION: Search, Filters, Tools, Actions, User */}
+          {/* ==================================================== */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             
-            {/* Search Input with ⌘K */}
+            {/* Desktop Search Input with Command Palette Hint */}
             <div className="relative hidden xl:block">
               <input 
                 type="text" 
-                placeholder="Search (⌘K)"
+                placeholder="Search or ⌘K"
                 value={searchQuery}
                 onChange={(e) => dispatch(setSearchQuery(e.target.value))}
-                className="w-36 2xl:w-48 pl-7 pr-3 py-1.5 bg-slate-100/80 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 outline-none focus:border-slate-400 focus:bg-white transition-all"
+                className="w-36 2xl:w-44 pl-7 pr-7 py-1.2 bg-slate-100/90 dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 outline-none focus:border-blue-500 dark:focus:border-blue-500 focus:bg-white dark:focus:bg-slate-950 transition-all placeholder:text-slate-400"
               />
-              <span className="absolute left-2 top-2 text-xs text-slate-400">🔍</span>
+              <Search className="w-3.5 h-3.5 absolute left-2 top-2 text-slate-400" />
+              <button 
+                onClick={() => dispatch(setCommandPaletteOpen(true))}
+                className="absolute right-1.5 top-1.5 text-[9px] font-bold text-slate-400 bg-slate-200/80 dark:bg-slate-800 px-1 rounded hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                title="Open Command Palette (⌘K)"
+              >
+                ⌘K
+              </button>
             </div>
 
-            {/* Priority Filter */}
-            <select
-              value={filterPriority}
-              onChange={(e) => dispatch(setFilterPriority(e.target.value))}
-              className="hidden lg:block px-2.5 py-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 outline-none cursor-pointer"
-            >
-              <option value="all">Priority: All</option>
-              <option value="urgent">🔴 Urgent</option>
-              <option value="high">🟡 High</option>
-              <option value="medium">🟢 Medium</option>
-              <option value="low">⚪ Low</option>
-            </select>
-
-            {/* Dedicated Standalone Export PDF Button */}
+            {/* Compact Search Trigger for <xl screens */}
             <button
-              onClick={handleExportPDF}
-              className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300 rounded-xl text-xs font-extrabold transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center gap-1.5"
-              title="Export 3-column Kanban workspace report as clean PDF"
+              onClick={() => dispatch(setCommandPaletteOpen(true))}
+              className="xl:hidden p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+              title="Search tasks & jump to commands (⌘K)"
             >
-              <span>📄</span>
-              <span className="hidden sm:inline">Export PDF</span>
+              <Search className="w-3.5 h-3.5" />
             </button>
 
-            {/* Primary Gradient + New Task Button */}
+            {/* Priority Filter (lg+ screens) */}
+            <div className="relative hidden lg:flex items-center">
+              <select
+                value={filterPriority}
+                onChange={(e) => dispatch(setFilterPriority(e.target.value))}
+                className="pl-6 pr-2 py-1.2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 outline-none cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+                title="Filter tasks by priority"
+              >
+                <option value="all">Priority: All</option>
+                <option value="urgent">Urgent</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+              <SlidersHorizontal className="w-3 h-3 text-slate-400 absolute left-2 pointer-events-none" />
+            </div>
+
+            {/* Primary Action: + New Task Button */}
             <button
               disabled={isViewer}
               onClick={() => {
@@ -226,137 +361,193 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
                 }
                 dispatch(setActiveModal('newTask'));
               }}
-              className={`px-3 py-1.5 rounded-xl font-extrabold text-xs text-white shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1 ${
+              className={`px-2.5 sm:px-3 py-1.2 rounded-xl font-extrabold text-xs text-white shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1 shrink-0 ${
                 isViewer 
-                  ? 'bg-slate-300 cursor-not-allowed text-slate-500' 
-                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                  ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500' 
+                  : 'bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/20'
               }`}
+              title="Create new task (Key C)"
             >
-              <span>+</span>
-              <span>New Task</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden xs:inline sm:inline">New Task</span>
             </button>
 
-            {/* Export & Backup Dropdown Menu */}
-            <div className="relative hidden sm:block">
+            {/* Undo / Redo (2xl+ screens) */}
+            <div className="hidden 2xl:flex items-center gap-0.5">
               <button
-                onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-                className="p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
-                title="Export & Backup options"
+                onClick={() => dispatch(undo())}
+                disabled={pastHistory.length === 0}
+                className={`p-1.5 rounded-xl border text-xs font-bold transition-all ${
+                  pastHistory.length > 0 
+                    ? 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer' 
+                    : 'border-slate-200/50 dark:border-slate-800/50 text-slate-300 dark:text-slate-700 cursor-not-allowed opacity-40'
+                }`}
+                title="Undo task action (Ctrl+Z)"
               >
-                <span>💾</span>
-                <span className="hidden md:inline">Backup</span>
-                <span>▾</span>
+                <Undo2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => dispatch(redo())}
+                disabled={futureHistory.length === 0}
+                className={`p-1.5 rounded-xl border text-xs font-bold transition-all ${
+                  futureHistory.length > 0 
+                    ? 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer' 
+                    : 'border-slate-200/50 dark:border-slate-800/50 text-slate-300 dark:text-slate-700 cursor-not-allowed opacity-40'
+                }`}
+                title="Redo task action (Ctrl+Y)"
+              >
+                <Redo2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Secondary Tools & More Actions Menu */}
+            <div className="relative" ref={toolsMenuRef}>
+              <button
+                onClick={() => setIsToolsMenuOpen(!isToolsMenuOpen)}
+                className={`p-1.5 sm:px-2 sm:py-1.2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                  isToolsMenuOpen 
+                    ? 'bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white' 
+                    : 'bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+                }`}
+                title="More workspace tools & export options"
+              >
+                <MoreHorizontal className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline text-xs font-bold">Tools</span>
               </button>
 
-              {isExportMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-2xl z-50 animate-fadeIn text-xs">
-                  <div className="text-[10px] uppercase font-bold text-slate-400 px-2 py-1 tracking-wider">
-                    Document & Data Export
+              {/* Tools Flyout Dropdown */}
+              {isToolsMenuOpen && (
+                <div className="absolute right-0 mt-2 w-60 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-2xl z-50 animate-fadeIn text-xs">
+                  <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 px-2.5 py-1 tracking-wider">
+                    Workspace Actions & Export
                   </div>
                   
-                  {/* PDF Export Action */}
+                  {/* Export PDF Report */}
                   <button
                     onClick={handleExportPDF}
-                    className="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-700 dark:hover:text-rose-400 font-bold transition-colors cursor-pointer flex items-center gap-2"
+                    className="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-700 dark:hover:text-rose-400 font-bold transition-colors cursor-pointer flex items-center gap-2.5"
                   >
-                    <span>📄</span>
+                    <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400">
+                      <FileText className="w-3.5 h-3.5" />
+                    </div>
                     <div>
-                      <span className="block">Export PDF Report</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Clean 3-column printable layout</span>
+                      <span className="block font-bold">Export PDF Report</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Clean 3-column printable report</span>
                     </div>
                   </button>
 
-                  {/* JSON Backup Action */}
+                  {/* Backup JSON */}
                   <button
                     onClick={handleExportJSON}
-                    className="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition-colors cursor-pointer flex items-center gap-2"
+                    className="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-400 font-bold transition-colors cursor-pointer flex items-center gap-2.5"
                   >
-                    <span>💾</span>
+                    <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400">
+                      <Download className="w-3.5 h-3.5" />
+                    </div>
                     <div>
-                      <span className="block">Backup JSON</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Download full workspace state</span>
+                      <span className="block font-bold">Download JSON Backup</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Full local state backup file</span>
                     </div>
                   </button>
 
-                  {/* JSON Import Action */}
+                  {/* Restore JSON */}
                   <button
                     onClick={() => {
-                      setIsExportMenuOpen(false);
+                      setIsToolsMenuOpen(false);
                       fileInputRef.current?.click();
                     }}
-                    className="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition-colors cursor-pointer flex items-center gap-2 border-t border-slate-100 dark:border-slate-800 mt-1"
+                    className="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-700 dark:hover:text-blue-400 font-bold transition-colors cursor-pointer flex items-center gap-2.5"
                   >
-                    <span>📂</span>
-                    <div>
-                      <span className="block">Restore JSON Backup</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Upload valid workspace JSON</span>
+                    <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400">
+                      <Upload className="w-3.5 h-3.5" />
                     </div>
+                    <div>
+                      <span className="block font-bold">Restore JSON Backup</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Upload backup JSON</span>
+                    </div>
+                  </button>
+
+                  <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+
+                  {/* Offline / Online Mode Toggle */}
+                  <button
+                    onClick={() => dispatch(toggleOffline())}
+                    className="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition-colors cursor-pointer flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className={`p-1.5 rounded-lg ${isOffline ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400'}`}>
+                        {isOffline ? <WifiOff className="w-3.5 h-3.5" /> : <Wifi className="w-3.5 h-3.5" />}
+                      </div>
+                      <div>
+                        <span className="block font-bold">Offline Simulation</span>
+                        <span className="text-[10px] text-slate-400 font-normal">
+                          {isOffline ? 'Disconnected state' : 'Connected to cloud'}
+                        </span>
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${isOffline ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                      {isOffline ? 'Offline' : 'Online'}
+                    </span>
+                  </button>
+
+                  {/* Manual Cloud Sync */}
+                  <button
+                    onClick={handleManualSync}
+                    className="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition-colors cursor-pointer flex items-center gap-2.5"
+                  >
+                    <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                      <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
+                    </div>
+                    <div>
+                      <span className="block font-bold">Force State Sync</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Reconcile local & server state</span>
+                    </div>
+                  </button>
+
+                  <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+
+                  {/* Keyboard Shortcuts Trigger */}
+                  <button
+                    onClick={() => {
+                      setIsToolsMenuOpen(false);
+                      dispatch(setActiveModal('shortcuts'));
+                    }}
+                    className="w-full text-left p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition-colors cursor-pointer flex items-center gap-2.5"
+                  >
+                    <Keyboard className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Keyboard Shortcuts</span>
+                  </button>
+
+                  {/* Activity Log Trigger */}
+                  <button
+                    onClick={() => {
+                      setIsToolsMenuOpen(false);
+                      dispatch(setActiveModal('activityLog'));
+                    }}
+                    className="w-full text-left p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition-colors cursor-pointer flex items-center gap-2.5"
+                  >
+                    <Activity className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Activity Audit Log</span>
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Offline Status & Sync Button */}
-            <div className="hidden lg:flex items-center gap-1">
-              <button
-                onClick={() => dispatch(toggleOffline())}
-                className={`px-2 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer border ${
-                  isOffline 
-                    ? 'bg-rose-50 border-rose-200 text-rose-700' 
-                    : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                }`}
-                title="Toggle client-side offline mode"
-              >
-                {isOffline ? '⚡ Offline' : '🟢 Online'}
-              </button>
-              
-              <button
-                onClick={handleManualSync}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs transition-colors cursor-pointer"
-                title="Manual Sync state reconciliation"
-              >
-                🔄
-              </button>
-            </div>
-
-            {/* Undo / Redo */}
-            <div className="hidden 2xl:flex items-center gap-1">
-              <button
-                onClick={() => dispatch(undo())}
-                disabled={pastHistory.length === 0}
-                className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
-                  pastHistory.length > 0 
-                    ? 'border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer' 
-                    : 'border-slate-200 text-slate-300 cursor-not-allowed opacity-50'
-                }`}
-                title="Undo task action (Ctrl+Z)"
-              >
-                ↩️
-              </button>
-              <button
-                onClick={() => dispatch(redo())}
-                disabled={futureHistory.length === 0}
-                className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
-                  futureHistory.length > 0 
-                    ? 'border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer' 
-                    : 'border-slate-200 text-slate-300 cursor-not-allowed opacity-50'
-                }`}
-                title="Redo task action (Ctrl+Y)"
-              >
-                ↪️
-              </button>
-            </div>
-
             {/* Notifications Bell */}
-            <div className="relative">
+            <div className="relative" ref={notifRef}>
               <button 
                 onClick={() => setIsNotifOpen(!isNotifOpen)}
-                className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 relative transition-all cursor-pointer"
+                className={`p-1.5 rounded-xl border text-slate-700 dark:text-slate-300 relative transition-all cursor-pointer ${
+                  isNotifOpen 
+                    ? 'bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700' 
+                    : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900'
+                }`}
                 title="Notifications"
+                aria-label="Notifications"
               >
-                🔔
+                <Bell className="w-3.5 h-3.5" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] w-4 h-4 rounded-full font-bold flex items-center justify-center animate-pulse">
+                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] w-4 h-4 rounded-full font-extrabold flex items-center justify-center animate-pulse shadow-xs">
                     {unreadCount}
                   </span>
                 )}
@@ -364,9 +555,12 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
 
               {/* Notification Popover */}
               {isNotifOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-4 z-50 animate-fadeIn text-xs">
+                <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-32px)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-4 z-50 animate-fadeIn text-xs">
                   <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <h4 className="font-extrabold text-slate-900 dark:text-white">Notifications ({unreadCount})</h4>
+                    <h4 className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Bell className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Notifications ({unreadCount})</span>
+                    </h4>
                     <div className="flex gap-2">
                       <button 
                         onClick={() => dispatch(markAllAsRead())} 
@@ -392,7 +586,9 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
                           key={n.id} 
                           onClick={() => dispatch(markAsRead(n.id))}
                           className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
-                            n.read ? 'bg-slate-50/70 dark:bg-slate-950 border-slate-100 dark:border-slate-800 text-slate-500' : 'bg-blue-50/50 dark:bg-blue-950/40 border-blue-100 dark:border-blue-900 text-slate-800 dark:text-slate-200'
+                            n.read 
+                              ? 'bg-slate-50/70 dark:bg-slate-950 border-slate-100 dark:border-slate-800 text-slate-500' 
+                              : 'bg-blue-50/50 dark:bg-blue-950/40 border-blue-100 dark:border-blue-900 text-slate-800 dark:text-slate-200'
                           }`}
                         >
                           <div className="flex justify-between items-center">
@@ -408,44 +604,110 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
               )}
             </div>
 
-            {/* Dark / Light Mode Toggle */}
+            {/* Dark / Light Theme Toggle */}
             <button
               onClick={() => dispatch(toggleTheme())}
-              className="p-1.5 sm:p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold transition-all cursor-pointer"
+              className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 text-xs transition-colors cursor-pointer"
               title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              aria-label="Toggle Theme"
             >
-              {theme === 'dark' ? '☀️' : '🌙'}
+              {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-slate-700" />}
             </button>
 
-            {/* Profile Trigger */}
+            {/* User Profile Menu */}
             {currentUser && (
-              <button 
-                onClick={() => setIsProfileOpen(true)}
-                className="flex items-center gap-1.5 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-slate-200 dark:border-slate-700 shadow-2xs cursor-pointer group"
-                title="User Profile & Settings"
-              >
-                <img 
-                  src={currentUser.avatar} 
-                  alt={currentUser.name} 
-                  className="w-7 h-7 rounded-full bg-slate-200 object-cover border border-slate-300 dark:border-slate-600"
-                />
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 pr-1 hidden sm:inline group-hover:text-blue-600">
-                  {currentUser.name.split(' ')[0]}
-                </span>
-              </button>
+              <div className="relative" ref={userMenuRef}>
+                <button 
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center gap-1.5 p-0.5 sm:p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-slate-200 dark:border-slate-700 shadow-2xs cursor-pointer group shrink-0"
+                  title="User Profile & Settings"
+                >
+                  <img 
+                    src={currentUser.avatar} 
+                    alt={currentUser.name} 
+                    className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-200 object-cover border border-slate-300 dark:border-slate-600" 
+                  />
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 pr-1 hidden lg:inline group-hover:text-blue-600 truncate max-w-[80px]">
+                    {currentUser.name.split(' ')[0]}
+                  </span>
+                  <ChevronDown className="w-3 h-3 text-slate-400 hidden lg:inline" />
+                </button>
+
+                {/* Profile Flyout Dropdown */}
+                {isUserMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-2xl z-50 animate-fadeIn text-xs">
+                    
+                    {/* User Header Details */}
+                    <div className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-800 mb-2">
+                      <img 
+                        src={currentUser.avatar} 
+                        alt={currentUser.name} 
+                        className="w-10 h-10 rounded-xl bg-slate-200 object-cover border border-slate-300 dark:border-slate-700" 
+                      />
+                      <div className="truncate">
+                        <h4 className="font-black text-xs text-slate-900 dark:text-white truncate">{currentUser.name}</h4>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate block">{currentUser.email}</span>
+                        <span className="inline-block mt-0.5 text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                          {currentUser.role}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Modal Triggers */}
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          setIsProfileModalOpen(true);
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition-colors cursor-pointer flex items-center gap-2"
+                      >
+                        <User className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Profile Settings</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          dispatch(setActiveModal('workspaceSettings'));
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition-colors cursor-pointer flex items-center gap-2"
+                      >
+                        <Settings className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Workspace Settings</span>
+                      </button>
+                    </div>
+
+                    <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
+
+                    {/* Sign Out Button */}
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        dispatch(logout());
+                        dispatch(addToast({ message: 'You have been successfully logged out.', type: 'info' }));
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold transition-colors cursor-pointer flex items-center gap-2"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Sign Out</span>
+                    </button>
+
+                  </div>
+                )}
+              </div>
             )}
 
-            {/* Prominent Sign Out Button */}
+            {/* Standalone Quick Sign Out Icon Button for Large Displays (xl+) */}
             <button
               onClick={() => {
                 dispatch(logout());
                 dispatch(addToast({ message: 'You have been successfully logged out.', type: 'info' }));
               }}
-              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-xs font-extrabold transition-all cursor-pointer shadow-2xs flex items-center gap-1.5 active:scale-95"
-              title="Sign out and return to landing page"
+              className="hidden xl:flex p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer shrink-0"
+              title="Quick Sign Out"
             >
-              <LogOut className="w-3.5 h-3.5 text-rose-500" />
-              <span>Sign Out</span>
+              <LogOut className="w-3.5 h-3.5" />
             </button>
 
             {/* Hidden File Input for JSON restore */}
@@ -462,29 +724,29 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
 
         {/* Bulk Multi-Select Action Bar (Shows when 1 or more tasks selected) */}
         {selectedTaskIds.length > 0 && (
-          <div className="bg-slate-900 text-white px-4 py-2 rounded-2xl flex items-center justify-between gap-3 text-xs animate-scaleUp">
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-blue-400">{selectedTaskIds.length} tasks selected</span>
+          <div className="mt-2 bg-slate-900 text-white px-3 sm:px-4 py-2 rounded-xl flex items-center justify-between gap-2 text-xs animate-scaleUp shadow-lg border border-slate-800">
+            <div className="flex items-center gap-2 min-w-0 truncate">
+              <span className="font-extrabold text-blue-400 shrink-0">{selectedTaskIds.length} selected</span>
               <button 
                 onClick={() => dispatch(clearSelectedTasks())}
-                className="text-[11px] text-slate-400 hover:text-white underline cursor-pointer"
+                className="text-[11px] text-slate-400 hover:text-white underline cursor-pointer truncate"
               >
-                Clear selection
+                Clear
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 shrink-0">
               <select
                 onChange={(e: any) => {
                   if (e.target.value) dispatch(bulkUpdateStatus(e.target.value));
                 }}
-                className="bg-slate-800 border border-slate-700 text-white rounded-xl px-2.5 py-1 text-xs font-bold outline-none cursor-pointer"
+                className="bg-slate-800 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs font-bold outline-none cursor-pointer"
                 defaultValue=""
               >
-                <option value="" disabled>Move Status...</option>
-                <option value="todo">🟡 To Do</option>
-                <option value="in-progress">🟢 In Progress</option>
-                <option value="done">🔴 Completed</option>
+                <option value="" disabled>Status...</option>
+                <option value="todo">To Do</option>
+                <option value="in-progress">In Progress</option>
+                <option value="done">Completed</option>
               </select>
 
               <button
@@ -498,9 +760,10 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
                     dispatch(bulkDeleteTasks());
                   }
                 }}
-                className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold transition-all cursor-pointer"
+                className="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0"
               >
-                Delete Selected 🗑️
+                <Trash2 className="w-3 h-3" />
+                <span className="hidden sm:inline">Delete</span>
               </button>
             </div>
           </div>
@@ -509,7 +772,7 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
       </header>
 
       {/* User Profile Modal */}
-      <UserProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
+      <UserProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
     </>
   );
 }
