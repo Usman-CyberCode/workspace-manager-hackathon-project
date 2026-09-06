@@ -22,7 +22,7 @@ export default function Home() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
-  const { isLiveSimEnabled } = useSelector((state: RootState) => state.ui);
+  const { theme, isLiveSimEnabled } = useSelector((state: RootState) => state.ui);
 
   useEffect(() => {
     setMounted(true);
@@ -74,39 +74,39 @@ export default function Home() {
 
   if (!mounted) return null;
 
-  // If not authenticated, render the Notion Landing Page
-  if (!isAuthenticated) {
-    return <LandingPage />;
-  }
-
-  // If authenticated, render full Notion Workspace Dashboard
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
-      
-      {/* Fixed Left Sidebar */}
-      <Sidebar 
-        mobileOpen={mobileSidebarOpen} 
-        onCloseMobile={() => setMobileSidebarOpen(false)} 
-      />
+    <div className={theme === 'dark' ? 'dark' : ''}>
+      {!isAuthenticated ? (
+        <LandingPage />
+      ) : (
+        <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-100 selection:text-blue-900">
+          
+          {/* Fixed Left Sidebar */}
+          <Sidebar 
+            mobileOpen={mobileSidebarOpen} 
+            onCloseMobile={() => setMobileSidebarOpen(false)} 
+          />
 
-      {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
-        <Navbar onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)} />
-        <main className="flex-1 p-4 sm:p-6">
-          <KanbanBoard />
-        </main>
-      </div>
+          {/* Main Workspace Area */}
+          <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+            <Navbar onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)} />
+            <main className="flex-1 p-4 sm:p-6">
+              <KanbanBoard />
+            </main>
+          </div>
 
-      {/* All Modular Modals & Overlays */}
-      <TaskDetailModal />
-      <NewTaskModal />
-      <ProjectModal />
-      <WorkspaceModal />
-      <WorkspaceSettingsModal />
-      <ActivityLogModal />
-      <KeyboardShortcutsModal />
-      <CommandPalette />
-      <ToastContainer />
+          {/* All Modular Modals & Overlays */}
+          <TaskDetailModal />
+          <NewTaskModal />
+          <ProjectModal />
+          <WorkspaceModal />
+          <WorkspaceSettingsModal />
+          <ActivityLogModal />
+          <KeyboardShortcutsModal />
+          <CommandPalette />
+          <ToastContainer />
+        </div>
+      )}
     </div>
   );
 }

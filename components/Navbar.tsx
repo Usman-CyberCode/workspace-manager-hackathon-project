@@ -6,7 +6,7 @@ import {
   setFilterStatus, setFilterAssignee, setSortBy, setGroupBy, 
   setActiveModal, clearNotifications, markAsRead, markAllAsRead, 
   toggleOffline, toggleTheme, bulkUpdateStatus, bulkDeleteTasks, 
-  clearSelectedTasks, importTasks, addToast, undo, redo, NotificationItem 
+  clearSelectedTasks, importTasks, addToast, undo, redo, NotificationItem, logout 
 } from '@/store';
 import UserProfileModal from '@/components/UserProfileModal';
 import { Workspace, Project, TaskItem, MockUser } from '@/lib/mockdata';
@@ -254,23 +254,41 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
               )}
             </div>
 
+            {/* Dark / Light Mode Toggle */}
+            <button
+              onClick={() => dispatch(toggleTheme())}
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold transition-all cursor-pointer"
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+
             {/* Profile Trigger */}
             {currentUser && (
               <button 
                 onClick={() => setIsProfileOpen(true)}
-                className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 transition-all border border-slate-200 shadow-2xs cursor-pointer group"
+                className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-slate-200 dark:border-slate-700 shadow-2xs cursor-pointer group"
                 title="User Profile & Settings"
               >
                 <img 
                   src={currentUser.avatar} 
                   alt={currentUser.name} 
-                  className="w-7 h-7 rounded-full bg-slate-200 object-cover border border-slate-300"
+                  className="w-7 h-7 rounded-full bg-slate-200 object-cover border border-slate-300 dark:border-slate-600"
                 />
-                <span className="text-xs font-bold text-slate-800 pr-1.5 hidden sm:inline group-hover:text-blue-600">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 pr-1.5 hidden sm:inline group-hover:text-blue-600">
                   {currentUser.name.split(' ')[0]}
                 </span>
               </button>
             )}
+
+            {/* Prominent Sign Out Button */}
+            <button
+              onClick={() => dispatch(logout())}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-xs font-extrabold transition-all cursor-pointer shadow-2xs"
+              title="Sign out and return to landing page"
+            >
+              Sign Out 🚪
+            </button>
 
           </div>
         </div>
@@ -353,6 +371,16 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
               <option value="createdAt">Sort: Created</option>
               <option value="title">Sort: Title</option>
             </select>
+
+            {/* Dedicated Standalone Export PDF Button */}
+            <button
+              onClick={handleExportPDF}
+              className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300 rounded-xl text-xs font-extrabold transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center gap-1.5"
+              title="Export 3-column Kanban workspace report as clean PDF"
+            >
+              <span>📄</span>
+              <span>Export PDF</span>
+            </button>
 
             {/* Primary Gradient + New Task Button */}
             <button
