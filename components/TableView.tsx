@@ -39,31 +39,31 @@ export default function TableView() {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs text-xs font-sans">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs text-xs font-sans">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-extrabold uppercase text-[10px] tracking-wider">
+            <tr className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-extrabold uppercase text-[10px] tracking-wider">
               <th className="p-3.5 w-10 text-center">
                 <span className="sr-only">Select</span>
               </th>
-              <th className="p-3.5 cursor-pointer hover:text-slate-800" onClick={() => handleSort('title')}>
+              <th className="p-3.5 cursor-pointer hover:text-slate-800 dark:hover:text-white transition-colors" onClick={() => handleSort('title')}>
                 Task Title {sortColumn === 'title' && (sortAsc ? '▲' : '▼')}
               </th>
-              <th className="p-3.5 cursor-pointer hover:text-slate-800" onClick={() => handleSort('status')}>
+              <th className="p-3.5 cursor-pointer hover:text-slate-800 dark:hover:text-white transition-colors" onClick={() => handleSort('status')}>
                 Status {sortColumn === 'status' && (sortAsc ? '▲' : '▼')}
               </th>
-              <th className="p-3.5 cursor-pointer hover:text-slate-800" onClick={() => handleSort('priority')}>
+              <th className="p-3.5 cursor-pointer hover:text-slate-800 dark:hover:text-white transition-colors" onClick={() => handleSort('priority')}>
                 Priority {sortColumn === 'priority' && (sortAsc ? '▲' : '▼')}
               </th>
-              <th className="p-3.5 cursor-pointer hover:text-slate-800" onClick={() => handleSort('dueDate')}>
+              <th className="p-3.5 cursor-pointer hover:text-slate-800 dark:hover:text-white transition-colors" onClick={() => handleSort('dueDate')}>
                 Due Date {sortColumn === 'dueDate' && (sortAsc ? '▲' : '▼')}
               </th>
               <th className="p-3.5">Subtasks</th>
               <th className="p-3.5 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {filteredTasks.length === 0 ? (
               <tr>
                 <td colSpan={7} className="p-8 text-center text-slate-400 font-medium">
@@ -80,8 +80,8 @@ export default function TableView() {
                   <tr 
                     key={task.id} 
                     onClick={() => dispatch(setSelectedTaskId(task.id))}
-                    className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
-                      isSelected ? 'bg-blue-50/40' : ''
+                    className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${
+                      isSelected ? 'bg-blue-50/40 dark:bg-blue-950/40' : ''
                     }`}
                   >
                     <td className="p-3.5 text-center" onClick={(e) => e.stopPropagation()}>
@@ -92,7 +92,7 @@ export default function TableView() {
                         className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
                       />
                     </td>
-                    <td className="p-3.5 font-bold text-slate-900 max-w-xs truncate">
+                    <td className="p-3.5 font-bold text-slate-900 dark:text-white max-w-xs truncate">
                       <div className="flex items-center gap-2">
                         <span className="truncate">{task.title}</span>
                         {task.attachments?.length > 0 && (
@@ -108,11 +108,11 @@ export default function TableView() {
                         disabled={isViewer}
                         value={task.status}
                         onChange={(e: any) => dispatch(updateTaskStatus({ id: task.id, status: e.target.value }))}
-                        className="bg-transparent font-bold capitalize text-slate-700 outline-none cursor-pointer text-xs"
+                        className="bg-transparent font-bold capitalize text-slate-700 dark:text-slate-300 outline-none cursor-pointer text-xs"
                       >
-                        <option value="todo">🟡 To Do</option>
-                        <option value="in-progress">🟢 In Progress</option>
-                        <option value="done">🔴 Completed</option>
+                        <option value="todo" className="dark:bg-slate-900">🟡 To Do</option>
+                        <option value="in-progress" className="dark:bg-slate-900">🟢 In Progress</option>
+                        <option value="done" className="dark:bg-slate-900">🔴 Completed</option>
                       </select>
                     </td>
                     <td className="p-3.5" onClick={(e) => e.stopPropagation()}>
@@ -120,37 +120,37 @@ export default function TableView() {
                         disabled={isViewer}
                         value={task.priority}
                         onChange={(e: any) => dispatch(updateTaskPriority({ id: task.id, priority: e.target.value }))}
-                        className="bg-transparent font-extrabold uppercase text-[10px] text-slate-700 outline-none cursor-pointer"
+                        className="bg-transparent font-extrabold uppercase text-[10px] text-slate-700 dark:text-slate-300 outline-none cursor-pointer"
                       >
-                        <option value="urgent">🔴 Urgent</option>
-                        <option value="high">🟡 High</option>
-                        <option value="medium">🟢 Medium</option>
-                        <option value="low">⚪ Low</option>
+                        <option value="urgent" className="dark:bg-slate-900">🔴 Urgent</option>
+                        <option value="high" className="dark:bg-slate-900">🟡 High</option>
+                        <option value="medium" className="dark:bg-slate-900">🟢 Medium</option>
+                        <option value="low" className="dark:bg-slate-900">⚪ Low</option>
                       </select>
                     </td>
-                    <td className="p-3.5 text-slate-500 font-medium">
+                    <td className="p-3.5 text-slate-500 dark:text-slate-400 font-medium">
                       📅 {task.dueDate}
                     </td>
                     <td className="p-3.5">
                       {subtaskCount > 0 ? (
                         <div className="flex items-center gap-2">
-                          <div className="w-16 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                          <div className="w-16 bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
                             <div 
                               className="bg-blue-600 h-full rounded-full"
                               style={{ width: `${(completedSubtasks / subtaskCount) * 100}%` }}
                             />
                           </div>
-                          <span className="text-[10px] text-slate-500 font-bold">{completedSubtasks}/{subtaskCount}</span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">{completedSubtasks}/{subtaskCount}</span>
                         </div>
                       ) : (
-                        <span className="text-slate-300 text-[10px]">—</span>
+                        <span className="text-slate-300 dark:text-slate-600 text-[10px]">—</span>
                       )}
                     </td>
                     <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
                       {!isViewer && (
                         <button 
                           onClick={() => dispatch(deleteTask(task.id))}
-                          className="text-rose-500 hover:text-rose-700 font-bold text-[11px] p-1 cursor-pointer"
+                          className="text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 font-bold text-[11px] p-1 cursor-pointer"
                           title="Delete task"
                         >
                           ✕

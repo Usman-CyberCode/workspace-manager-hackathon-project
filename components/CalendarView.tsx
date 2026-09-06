@@ -23,15 +23,15 @@ export default function CalendarView() {
   const startDayOffset = 1; // Tuesday start
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs font-sans text-xs">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs font-sans text-xs">
       {/* Calendar Header */}
-      <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-100">
+      <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
         <div>
-          <h3 className="font-extrabold text-sm text-slate-900">September 2026</h3>
-          <p className="text-[11px] text-slate-500 font-medium">Sprint release cycle calendar</p>
+          <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">September 2026</h3>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Sprint release cycle calendar</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold text-slate-500">
+          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
             {filteredTasks.length} Scheduled Tasks
           </span>
         </div>
@@ -46,7 +46,7 @@ export default function CalendarView() {
       <div className="grid grid-cols-7 gap-2">
         {/* Offset days */}
         {Array.from({ length: startDayOffset }).map((_, i) => (
-          <div key={`offset-${i}`} className="min-h-[95px] bg-slate-50/40 rounded-xl border border-slate-100 p-1.5 opacity-40" />
+          <div key={`offset-${i}`} className="min-h-[95px] bg-slate-50/40 dark:bg-slate-950/40 rounded-xl border border-slate-100 dark:border-slate-800/60 p-1.5 opacity-40" />
         ))}
 
         {/* 30 Days of September */}
@@ -58,16 +58,18 @@ export default function CalendarView() {
           return (
             <div 
               key={dayNum} 
-              className="min-h-[95px] bg-slate-50/60 rounded-xl border border-slate-200/80 p-1.5 flex flex-col justify-between hover:border-slate-300 transition-colors"
+              className="min-h-[95px] bg-slate-50/60 dark:bg-slate-950/60 rounded-xl border border-slate-200/80 dark:border-slate-800 p-1.5 flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
             >
               <div className="flex justify-between items-center mb-1">
                 <span className={`text-[11px] font-extrabold px-1.5 py-0.2 rounded-md ${
-                  dayTasks.length > 0 ? 'bg-slate-200/80 text-slate-800' : 'text-slate-400'
+                  dayTasks.length > 0 
+                    ? 'bg-slate-200/80 dark:bg-slate-800 text-slate-800 dark:text-slate-200' 
+                    : 'text-slate-400'
                 }`}>
                   {dayNum}
                 </span>
                 {dayTasks.length > 0 && (
-                  <span className="text-[9px] font-bold text-blue-600">
+                  <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400">
                     {dayTasks.length} task{dayTasks.length > 1 ? 's' : ''}
                   </span>
                 )}
@@ -80,10 +82,10 @@ export default function CalendarView() {
                     onClick={() => dispatch(setSelectedTaskId(t.id))}
                     className={`p-1 rounded-md text-[10px] font-bold truncate cursor-pointer shadow-2xs transition-transform active:scale-95 ${
                       t.status === 'done' 
-                        ? 'bg-rose-50 text-rose-700 border border-rose-200' 
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:border-rose-800 dark:text-rose-300' 
                         : t.status === 'in-progress'
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-amber-50 text-amber-800 border border-amber-200'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-300'
+                        : 'bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/50 dark:border-amber-800 dark:text-amber-300'
                     }`}
                     title={t.title}
                   >

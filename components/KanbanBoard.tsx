@@ -21,6 +21,7 @@ export default function KanbanBoard() {
     searchQuery = '', 
     filterPriority = 'all', 
     filterStatus = 'all',
+    sortBy = 'dueDate',
     selectedTaskIds = [] 
   } = state.tasks;
   
@@ -62,9 +63,25 @@ export default function KanbanBoard() {
     }));
   };
 
-  const todoTasks = filteredTasks.filter((t: TaskItem) => t.status === 'todo');
-  const inProgressTasks = filteredTasks.filter((t: TaskItem) => t.status === 'in-progress');
-  const doneTasks = filteredTasks.filter((t: TaskItem) => t.status === 'done');
+  const sortTaskList = (taskList: TaskItem[]) => {
+    return [...taskList].sort((a, b) => {
+      if (sortBy === 'priority') {
+        const priorityOrder: Record<string, number> = { urgent: 1, high: 2, medium: 3, low: 4 };
+        return (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99);
+      }
+      if (sortBy === 'title') {
+        return a.title.localeCompare(b.title);
+      }
+      if (sortBy === 'createdAt') {
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      }
+      return new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime();
+    });
+  };
+
+  const todoTasks = sortTaskList(filteredTasks.filter((t: TaskItem) => t.status === 'todo'));
+  const inProgressTasks = sortTaskList(filteredTasks.filter((t: TaskItem) => t.status === 'in-progress'));
+  const doneTasks = sortTaskList(filteredTasks.filter((t: TaskItem) => t.status === 'done'));
 
   return (
     <div className="w-full max-w-7xl mx-auto font-sans pb-16">

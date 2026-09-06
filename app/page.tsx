@@ -5,6 +5,9 @@ import { RootState, addNotification, addActivity } from '@/store';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import KanbanBoard from '@/components/KanbanBoard';
+import TableView from '@/components/TableView';
+import CalendarView from '@/components/CalendarView';
+import ListView from '@/components/ListView';
 import LandingPage from '@/components/LandingPage';
 import CommandPalette from '@/components/CommandPalette';
 import TaskDetailModal from '@/components/TaskDetailModal';
@@ -23,6 +26,7 @@ export default function Home() {
 
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const { theme, isLiveSimEnabled } = useSelector((state: RootState) => state.ui);
+  const { activeView } = useSelector((state: RootState) => state.tasks);
 
   useEffect(() => {
     setMounted(true);
@@ -90,8 +94,11 @@ export default function Home() {
           {/* Main Workspace Area */}
           <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
             <Navbar onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)} />
-            <main className="flex-1 p-4 sm:p-6">
-              <KanbanBoard />
+            <main className="flex-1 p-4 sm:p-6 overflow-y-auto">
+              {activeView === 'kanban' && <KanbanBoard />}
+              {activeView === 'table' && <TableView />}
+              {activeView === 'calendar' && <CalendarView />}
+              {activeView === 'list' && <ListView />}
             </main>
           </div>
 
