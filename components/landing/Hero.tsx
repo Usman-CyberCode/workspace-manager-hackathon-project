@@ -16,7 +16,7 @@ import {
 import { INITIAL_USERS } from '@/lib/mockdata';
 
 interface HeroProps {
-  onOpenAuth: () => void;
+  onOpenAuth: (mode?: 'login' | 'signup') => void;
   onLaunchDemo: () => void;
 }
 
@@ -104,8 +104,8 @@ export default function Hero({ onOpenAuth, onLaunchDemo }: HeroProps) {
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            onClick={onOpenAuth}
-            className="w-full sm:w-auto px-8 py-4 bg-slate-950 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-slate-950/15 dark:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2.5"
+            onClick={() => onOpenAuth('signup')}
+            className="w-full sm:w-auto px-7 py-4 bg-slate-950 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-slate-950/15 dark:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2.5"
           >
             <span>Start Free with Work Email</span>
             <ArrowRight className="w-4 h-4" />
@@ -114,11 +114,20 @@ export default function Hero({ onOpenAuth, onLaunchDemo }: HeroProps) {
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
+            onClick={() => onOpenAuth('login')}
+            className="w-full sm:w-auto px-6 py-4 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-extrabold text-sm rounded-2xl shadow-2xs transition-all cursor-pointer flex items-center justify-center gap-2"
+          >
+            <span>Sign In</span>
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             onClick={onLaunchDemo}
-            className="w-full sm:w-auto px-7 py-4 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-800 font-extrabold text-sm rounded-2xl shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-6 py-4 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-800 font-extrabold text-sm rounded-2xl shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
           >
             <Sparkles className="w-4 h-4 text-amber-500" />
-            <span>Interactive Demo (Alex Morgan)</span>
+            <span>Interactive Demo</span>
           </motion.button>
         </motion.div>
       </motion.div>

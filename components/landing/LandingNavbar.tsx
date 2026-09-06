@@ -17,7 +17,7 @@ import {
 interface NavbarProps {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
-  onOpenAuth: () => void;
+  onOpenAuth: (mode?: 'login' | 'signup') => void;
   onLaunchDemo: () => void;
 }
 
@@ -56,7 +56,7 @@ export default function LandingNavbar({
           : 'bg-transparent py-4'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between flex-nowrap whitespace-nowrap gap-4">
         
         {/* Logo */}
         <a href="#" className="flex items-center gap-3 group cursor-pointer">
@@ -106,7 +106,7 @@ export default function LandingNavbar({
 
           {/* Login Button */}
           <button
-            onClick={onOpenAuth}
+            onClick={() => onOpenAuth('login')}
             className="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
           >
             Login
@@ -127,7 +127,7 @@ export default function LandingNavbar({
           <motion.button
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
-            onClick={onOpenAuth}
+            onClick={() => onOpenAuth('signup')}
             className="px-4 py-2 text-xs font-black bg-slate-950 dark:bg-white text-white dark:text-slate-950 hover:bg-slate-800 dark:hover:bg-slate-200 rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
           >
             <span>Get Started</span>
@@ -177,9 +177,18 @@ export default function LandingNavbar({
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
+                  onOpenAuth('login');
+                }}
+                className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 font-bold text-xs rounded-xl flex items-center justify-center gap-2 text-slate-800 dark:text-slate-200"
+              >
+                <span>Sign In / Login</span>
+              </button>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
                   onLaunchDemo();
                 }}
-                className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 font-bold text-xs rounded-xl flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold text-xs rounded-xl flex items-center justify-center gap-2 border border-blue-200/80 dark:border-blue-900"
               >
                 <Sparkles className="w-4 h-4 text-amber-500" />
                 <span>Launch Live Demo</span>
@@ -187,7 +196,7 @@ export default function LandingNavbar({
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  onOpenAuth();
+                  onOpenAuth('signup');
                 }}
                 className="w-full py-2.5 bg-slate-950 dark:bg-white text-white dark:text-slate-950 font-black text-xs rounded-xl flex items-center justify-center gap-2"
               >

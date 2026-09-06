@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 interface FooterProps {
-  onOpenAuth: () => void;
+  onOpenAuth: (mode?: 'login' | 'signup') => void;
 }
 
 export default function Footer({ onOpenAuth }: FooterProps) {
@@ -30,8 +30,8 @@ export default function Footer({ onOpenAuth }: FooterProps) {
         { name: 'Features', href: '#features' },
         { name: 'Views & Kanban', href: '#views' },
         { name: 'Pricing Plans', href: '#pricing' },
-        { name: 'Changelog', href: '#' },
-        { name: 'Roadmap', href: '#' },
+        { name: 'Sign In (Console)', onClick: () => onOpenAuth('login') },
+        { name: 'Create Free Account', onClick: () => onOpenAuth('signup') },
       ],
     },
     {
@@ -196,14 +196,24 @@ export default function Footer({ onOpenAuth }: FooterProps) {
                 {col.title}
               </h5>
               <ul className="space-y-2.5">
-                {col.links.map((link) => (
+                {col.links.map((link: any) => (
                   <li key={link.name}>
-                    <a
-                      href={link.href}
-                      className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium"
-                    >
-                      {link.name}
-                    </a>
+                    {link.onClick ? (
+                      <button
+                        type="button"
+                        onClick={link.onClick}
+                        className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium text-left cursor-pointer"
+                      >
+                        {link.name}
+                      </button>
+                    ) : (
+                      <a
+                        href={link.href}
+                        className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium"
+                      >
+                        {link.name}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>

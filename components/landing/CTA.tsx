@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface CTAProps {
-  onOpenAuth: () => void;
+  onOpenAuth: (mode?: 'login' | 'signup') => void;
   onLaunchDemo: () => void;
 }
 
@@ -77,21 +77,30 @@ export default function CTA({ onOpenAuth, onLaunchDemo }: CTAProps) {
             <motion.button
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
-              onClick={onOpenAuth}
+              onClick={() => onOpenAuth('signup')}
               className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-slate-100 text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-white/10 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
-              <span>Get Started with OTP</span>
+              <span>Get Started Free</span>
               <ArrowRight className="w-4 h-4" />
             </motion.button>
 
             <motion.button
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
-              onClick={onLaunchDemo}
+              onClick={() => onOpenAuth('login')}
               className="w-full sm:w-auto px-7 py-4 bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 font-extrabold text-sm rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
             >
+              <span>Sign In</span>
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onLaunchDemo}
+              className="w-full sm:w-auto px-7 py-4 bg-indigo-950/70 hover:bg-indigo-900/70 text-indigo-200 border border-indigo-800/80 font-extrabold text-sm rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+            >
               <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>Launch Live Demo (1-Click)</span>
+              <span>Launch Live Demo</span>
             </motion.button>
           </div>
 

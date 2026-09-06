@@ -10,6 +10,7 @@ import {
 } from '@/store';
 import UserProfileModal from '@/components/UserProfileModal';
 import { Workspace, Project, TaskItem, MockUser } from '@/lib/mockdata';
+import { LogOut } from 'lucide-react';
 
 interface NavbarProps {
   onToggleMobileSidebar?: () => void;
@@ -102,48 +103,201 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white border-b border-slate-200/90 px-4 sm:px-6 py-2.5 flex flex-col gap-2 font-sans shadow-2xs">
+      <header className="sticky top-0 z-20 bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm border-b border-slate-200/90 dark:border-slate-800 px-3 sm:px-5 py-2 font-sans shadow-2xs transition-colors">
         
-        {/* Top Row: Breadcrumbs, Search, Quick Tools, Profile */}
-        <div className="flex items-center justify-between gap-3">
+        {/* Single Row: Everything Aligned in One Line */}
+        <div className="flex items-center justify-between gap-3 w-full">
           
-          {/* Left: Mobile Toggle & Notion Breadcrumbs */}
-          <div className="flex items-center gap-2 min-w-0">
+          {/* Left Group: Mobile Toggle, Breadcrumbs, and Notion Views */}
+          <div className="flex items-center gap-2.5 min-w-0 shrink-0">
             <button
               onClick={onToggleMobileSidebar}
               className="md:hidden p-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100"
             >
               ☰
             </button>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold truncate">
-              <span className="font-bold text-slate-800 flex items-center gap-1">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold truncate max-w-[200px] xl:max-w-[260px]">
+              <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1 truncate">
                 <span>{activeWorkspace?.icon || '⚡'}</span>
                 <span className="truncate">{activeWorkspace?.name || 'Dev on Core'}</span>
               </span>
               <span>/</span>
-              <span className="font-bold text-slate-900 truncate">
+              <span className="font-bold text-slate-900 dark:text-white truncate">
                 {activeProject?.name || 'Sprint Launch'}
               </span>
             </div>
+
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block mx-1" />
+
+            {/* Notion View Switcher Tabs */}
+            <div className="hidden sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs font-bold">
+              <button
+                onClick={() => dispatch(setActiveView('kanban'))}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  activeView === 'kanban' 
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs' 
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                }`}
+              >
+                <span>📋</span>
+                <span>Kanban</span>
+              </button>
+              <button
+                onClick={() => dispatch(setActiveView('table'))}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  activeView === 'table' 
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs' 
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                }`}
+              >
+                <span>📑</span>
+                <span>Table</span>
+              </button>
+              <button
+                onClick={() => dispatch(setActiveView('calendar'))}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  activeView === 'calendar' 
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs' 
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                }`}
+              >
+                <span>📅</span>
+                <span>Calendar</span>
+              </button>
+              <button
+                onClick={() => dispatch(setActiveView('list'))}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  activeView === 'list' 
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs' 
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                }`}
+              >
+                <span>📄</span>
+                <span>List</span>
+              </button>
+            </div>
           </div>
 
-          {/* Center/Right Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Right Group: Search, Filter, PDF, New Task, Undo/Redo, Notifications, Theme, Profile, Sign Out */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             
             {/* Search Input with ⌘K */}
-            <div className="relative hidden sm:block">
+            <div className="relative hidden xl:block">
               <input 
                 type="text" 
-                placeholder="Search tasks, tags... (⌘K)"
+                placeholder="Search (⌘K)"
                 value={searchQuery}
                 onChange={(e) => dispatch(setSearchQuery(e.target.value))}
-                className="w-48 lg:w-60 pl-8 pr-3 py-1.5 bg-slate-100/80 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-slate-400 focus:bg-white transition-all"
+                className="w-36 2xl:w-48 pl-7 pr-3 py-1.5 bg-slate-100/80 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 outline-none focus:border-slate-400 focus:bg-white transition-all"
               />
-              <span className="absolute left-2.5 top-2 text-xs text-slate-400">🔍</span>
+              <span className="absolute left-2 top-2 text-xs text-slate-400">🔍</span>
+            </div>
+
+            {/* Priority Filter */}
+            <select
+              value={filterPriority}
+              onChange={(e) => dispatch(setFilterPriority(e.target.value))}
+              className="hidden lg:block px-2.5 py-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 outline-none cursor-pointer"
+            >
+              <option value="all">Priority: All</option>
+              <option value="urgent">🔴 Urgent</option>
+              <option value="high">🟡 High</option>
+              <option value="medium">🟢 Medium</option>
+              <option value="low">⚪ Low</option>
+            </select>
+
+            {/* Dedicated Standalone Export PDF Button */}
+            <button
+              onClick={handleExportPDF}
+              className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300 rounded-xl text-xs font-extrabold transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center gap-1.5"
+              title="Export 3-column Kanban workspace report as clean PDF"
+            >
+              <span>📄</span>
+              <span className="hidden sm:inline">Export PDF</span>
+            </button>
+
+            {/* Primary Gradient + New Task Button */}
+            <button
+              disabled={isViewer}
+              onClick={() => {
+                if (isViewer) {
+                  dispatch(addToast({ message: 'Access Denied: Viewers cannot create tasks.', type: 'error' }));
+                  return;
+                }
+                dispatch(setActiveModal('newTask'));
+              }}
+              className={`px-3 py-1.5 rounded-xl font-extrabold text-xs text-white shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1 ${
+                isViewer 
+                  ? 'bg-slate-300 cursor-not-allowed text-slate-500' 
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+              }`}
+            >
+              <span>+</span>
+              <span>New Task</span>
+            </button>
+
+            {/* Export & Backup Dropdown Menu */}
+            <div className="relative hidden sm:block">
+              <button
+                onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                className="p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+                title="Export & Backup options"
+              >
+                <span>💾</span>
+                <span className="hidden md:inline">Backup</span>
+                <span>▾</span>
+              </button>
+
+              {isExportMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-2xl z-50 animate-fadeIn text-xs">
+                  <div className="text-[10px] uppercase font-bold text-slate-400 px-2 py-1 tracking-wider">
+                    Document & Data Export
+                  </div>
+                  
+                  {/* PDF Export Action */}
+                  <button
+                    onClick={handleExportPDF}
+                    className="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-700 dark:hover:text-rose-400 font-bold transition-colors cursor-pointer flex items-center gap-2"
+                  >
+                    <span>📄</span>
+                    <div>
+                      <span className="block">Export PDF Report</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Clean 3-column printable layout</span>
+                    </div>
+                  </button>
+
+                  {/* JSON Backup Action */}
+                  <button
+                    onClick={handleExportJSON}
+                    className="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition-colors cursor-pointer flex items-center gap-2"
+                  >
+                    <span>💾</span>
+                    <div>
+                      <span className="block">Backup JSON</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Download full workspace state</span>
+                    </div>
+                  </button>
+
+                  {/* JSON Import Action */}
+                  <button
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      fileInputRef.current?.click();
+                    }}
+                    className="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition-colors cursor-pointer flex items-center gap-2 border-t border-slate-100 dark:border-slate-800 mt-1"
+                  >
+                    <span>📂</span>
+                    <div>
+                      <span className="block">Restore JSON Backup</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Upload valid workspace JSON</span>
+                    </div>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Offline Status & Sync Button */}
-            <div className="flex items-center gap-1">
+            <div className="hidden lg:flex items-center gap-1">
               <button
                 onClick={() => dispatch(toggleOffline())}
                 className={`px-2 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer border ${
@@ -158,7 +312,7 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
               
               <button
                 onClick={handleManualSync}
-                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs transition-colors cursor-pointer"
                 title="Manual Sync state reconciliation"
               >
                 🔄
@@ -166,7 +320,7 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
             </div>
 
             {/* Undo / Redo */}
-            <div className="hidden lg:flex items-center gap-1">
+            <div className="hidden 2xl:flex items-center gap-1">
               <button
                 onClick={() => dispatch(undo())}
                 disabled={pastHistory.length === 0}
@@ -197,7 +351,7 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
             <div className="relative">
               <button 
                 onClick={() => setIsNotifOpen(!isNotifOpen)}
-                className="p-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 relative transition-all cursor-pointer"
+                className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 relative transition-all cursor-pointer"
                 title="Notifications"
               >
                 🔔
@@ -210,13 +364,13 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
 
               {/* Notification Popover */}
               {isNotifOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 z-50 animate-fadeIn text-xs">
-                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
-                    <h4 className="font-extrabold text-slate-900">Notifications ({unreadCount})</h4>
+                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-4 z-50 animate-fadeIn text-xs">
+                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white">Notifications ({unreadCount})</h4>
                     <div className="flex gap-2">
                       <button 
                         onClick={() => dispatch(markAllAsRead())} 
-                        className="text-[10px] text-blue-600 font-bold hover:underline cursor-pointer"
+                        className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
                       >
                         Mark all read
                       </button>
@@ -238,11 +392,11 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
                           key={n.id} 
                           onClick={() => dispatch(markAsRead(n.id))}
                           className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
-                            n.read ? 'bg-slate-50/70 border-slate-100 text-slate-500' : 'bg-blue-50/50 border-blue-100 text-slate-800'
+                            n.read ? 'bg-slate-50/70 dark:bg-slate-950 border-slate-100 dark:border-slate-800 text-slate-500' : 'bg-blue-50/50 dark:bg-blue-950/40 border-blue-100 dark:border-blue-900 text-slate-800 dark:text-slate-200'
                           }`}
                         >
                           <div className="flex justify-between items-center">
-                            <span className="font-bold text-xs text-slate-900">{n.title}</span>
+                            <span className="font-bold text-xs text-slate-900 dark:text-white">{n.title}</span>
                             <span className="text-[9px] text-slate-400">{n.time}</span>
                           </div>
                           <p className="text-[11px] mt-0.5 leading-snug">{n.text}</p>
@@ -257,7 +411,7 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
             {/* Dark / Light Mode Toggle */}
             <button
               onClick={() => dispatch(toggleTheme())}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold transition-all cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold transition-all cursor-pointer"
               title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
             >
               {theme === 'dark' ? '☀️' : '🌙'}
@@ -267,7 +421,7 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
             {currentUser && (
               <button 
                 onClick={() => setIsProfileOpen(true)}
-                className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-slate-200 dark:border-slate-700 shadow-2xs cursor-pointer group"
+                className="flex items-center gap-1.5 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-slate-200 dark:border-slate-700 shadow-2xs cursor-pointer group"
                 title="User Profile & Settings"
               >
                 <img 
@@ -275,7 +429,7 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
                   alt={currentUser.name} 
                   className="w-7 h-7 rounded-full bg-slate-200 object-cover border border-slate-300 dark:border-slate-600"
                 />
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 pr-1.5 hidden sm:inline group-hover:text-blue-600">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 pr-1 hidden sm:inline group-hover:text-blue-600">
                   {currentUser.name.split(' ')[0]}
                 </span>
               </button>
@@ -283,182 +437,16 @@ export default function Navbar({ onToggleMobileSidebar }: NavbarProps) {
 
             {/* Prominent Sign Out Button */}
             <button
-              onClick={() => dispatch(logout())}
-              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-xs font-extrabold transition-all cursor-pointer shadow-2xs"
+              onClick={() => {
+                dispatch(logout());
+                dispatch(addToast({ message: 'You have been successfully logged out.', type: 'info' }));
+              }}
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-xs font-extrabold transition-all cursor-pointer shadow-2xs flex items-center gap-1.5 active:scale-95"
               title="Sign out and return to landing page"
             >
-              Sign Out 🚪
+              <LogOut className="w-3.5 h-3.5 text-rose-500" />
+              <span>Sign Out</span>
             </button>
-
-          </div>
-        </div>
-
-        {/* Bottom Row: Notion Views Switcher, Filters, Export & Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-100">
-          
-          {/* Left: Notion View Switcher Tabs */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs">
-            <button
-              onClick={() => dispatch(setActiveView('kanban'))}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeView === 'kanban' 
-                  ? 'bg-white text-slate-900 shadow-xs' 
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <span>📋</span>
-              <span>Kanban</span>
-            </button>
-            <button
-              onClick={() => dispatch(setActiveView('table'))}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeView === 'table' 
-                  ? 'bg-white text-slate-900 shadow-xs' 
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <span>📑</span>
-              <span>Table</span>
-            </button>
-            <button
-              onClick={() => dispatch(setActiveView('calendar'))}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeView === 'calendar' 
-                  ? 'bg-white text-slate-900 shadow-xs' 
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <span>📅</span>
-              <span>Calendar</span>
-            </button>
-            <button
-              onClick={() => dispatch(setActiveView('list'))}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeView === 'list' 
-                  ? 'bg-white text-slate-900 shadow-xs' 
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <span>📄</span>
-              <span>List</span>
-            </button>
-          </div>
-
-          {/* Right: Filters, Primary + New Task, and Export Dropdown */}
-          <div className="flex items-center gap-2">
-            
-            {/* Priority Filter */}
-            <select
-              value={filterPriority}
-              onChange={(e) => dispatch(setFilterPriority(e.target.value))}
-              className="px-2.5 py-1.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer"
-            >
-              <option value="all">Priority: All</option>
-              <option value="urgent">🔴 Urgent</option>
-              <option value="high">🟡 High</option>
-              <option value="medium">🟢 Medium</option>
-              <option value="low">⚪ Low</option>
-            </select>
-
-            {/* Sort & Group Selectors */}
-            <select
-              value={sortBy}
-              onChange={(e: any) => dispatch(setSortBy(e.target.value))}
-              className="hidden lg:block px-2.5 py-1.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer"
-            >
-              <option value="dueDate">Sort: Due Date</option>
-              <option value="priority">Sort: Priority</option>
-              <option value="createdAt">Sort: Created</option>
-              <option value="title">Sort: Title</option>
-            </select>
-
-            {/* Dedicated Standalone Export PDF Button */}
-            <button
-              onClick={handleExportPDF}
-              className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300 rounded-xl text-xs font-extrabold transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center gap-1.5"
-              title="Export 3-column Kanban workspace report as clean PDF"
-            >
-              <span>📄</span>
-              <span>Export PDF</span>
-            </button>
-
-            {/* Primary Gradient + New Task Button */}
-            <button
-              disabled={isViewer}
-              onClick={() => {
-                if (isViewer) {
-                  dispatch(addToast({ message: 'Access Denied: Viewers cannot create tasks.', type: 'error' }));
-                  return;
-                }
-                dispatch(setActiveModal('newTask'));
-              }}
-              className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs text-white shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1 ${
-                isViewer 
-                  ? 'bg-slate-300 cursor-not-allowed text-slate-500' 
-                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
-              }`}
-            >
-              <span>+</span>
-              <span>New Task</span>
-            </button>
-
-            {/* Export & Backup Dropdown Menu */}
-            <div className="relative">
-              <button
-                onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              >
-                <span>Export / Backup</span>
-                <span>▾</span>
-              </button>
-
-              {isExportMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl p-2 shadow-2xl z-50 animate-fadeIn text-xs">
-                  <div className="text-[10px] uppercase font-bold text-slate-400 px-2 py-1 tracking-wider">
-                    Document & Data Export
-                  </div>
-                  
-                  {/* PDF Export Action */}
-                  <button
-                    onClick={handleExportPDF}
-                    className="w-full text-left p-2 rounded-xl text-slate-800 hover:bg-rose-50 hover:text-rose-700 font-bold transition-colors cursor-pointer flex items-center gap-2"
-                  >
-                    <span>📄</span>
-                    <div>
-                      <span className="block">Export PDF Report</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Clean 3-column printable layout</span>
-                    </div>
-                  </button>
-
-                  {/* JSON Backup Action */}
-                  <button
-                    onClick={handleExportJSON}
-                    className="w-full text-left p-2 rounded-xl text-slate-800 hover:bg-slate-100 font-bold transition-colors cursor-pointer flex items-center gap-2"
-                  >
-                    <span>💾</span>
-                    <div>
-                      <span className="block">Backup JSON</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Download full workspace state</span>
-                    </div>
-                  </button>
-
-                  {/* JSON Import Action */}
-                  <button
-                    onClick={() => {
-                      setIsExportMenuOpen(false);
-                      fileInputRef.current?.click();
-                    }}
-                    className="w-full text-left p-2 rounded-xl text-slate-800 hover:bg-slate-100 font-bold transition-colors cursor-pointer flex items-center gap-2 border-t border-slate-100 mt-1"
-                  >
-                    <span>📂</span>
-                    <div>
-                      <span className="block">Restore JSON Backup</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Upload valid workspace JSON</span>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
 
             {/* Hidden File Input for JSON restore */}
             <input 

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, verifyAndLogin, toggleTheme } from '@/store';
-import LoginScreen from './LoginScreen';
+import AuthCard from './AuthCard';
 
 // Modular Section Components
 import LandingNavbar from './landing/LandingNavbar';
@@ -19,6 +19,7 @@ export default function LandingPage() {
   const dispatch = useDispatch();
   const { theme } = useSelector((state: RootState) => state.ui);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
   const handleLaunchDemo = () => {
     dispatch(verifyAndLogin({ email: 'alex@devon.io' }));
@@ -28,6 +29,11 @@ export default function LandingPage() {
     dispatch(toggleTheme());
   };
 
+  const handleOpenAuth = (mode: 'login' | 'signup' = 'login') => {
+    setAuthMode(mode);
+    setShowAuthModal(true);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-100 dark:selection:bg-blue-900 selection:text-blue-900 dark:selection:text-blue-100 relative overflow-x-hidden transition-colors duration-200">
       
@@ -35,13 +41,13 @@ export default function LandingPage() {
       <LandingNavbar
         theme={theme}
         onToggleTheme={handleToggleTheme}
-        onOpenAuth={() => setShowAuthModal(true)}
+        onOpenAuth={handleOpenAuth}
         onLaunchDemo={handleLaunchDemo}
       />
 
       {/* 2. Hero Section */}
       <Hero
-        onOpenAuth={() => setShowAuthModal(true)}
+        onOpenAuth={handleOpenAuth}
         onLaunchDemo={handleLaunchDemo}
       />
 
@@ -62,16 +68,19 @@ export default function LandingPage() {
 
       {/* 8. Final CTA Banner */}
       <CtaBanner
-        onOpenAuth={() => setShowAuthModal(true)}
+        onOpenAuth={handleOpenAuth}
         onLaunchDemo={handleLaunchDemo}
       />
 
       {/* 9. Footer */}
-      <Footer onOpenAuth={() => setShowAuthModal(true)} />
+      <Footer onOpenAuth={handleOpenAuth} />
 
-      {/* Auth Screen Modal */}
+      {/* Animated Deepak Yadav Sliding Split-Screen Auth Card Modal */}
       {showAuthModal && (
-        <LoginScreen onClose={() => setShowAuthModal(false)} />
+        <AuthCard 
+          onClose={() => setShowAuthModal(false)} 
+          initialMode={authMode} 
+        />
       )}
 
     </div>

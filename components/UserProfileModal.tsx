@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import Link from 'next/link'; // Next.js Link imported
-import { RootState, updateProfile, deleteUser, logout } from '@/store';
+import { RootState, updateProfile, deleteUser, logout, addToast } from '@/store';
+import { LogOut } from 'lucide-react';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -45,6 +46,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
   const handleLogout = () => {
     dispatch(logout());
+    dispatch(addToast({ message: 'You have been successfully logged out.', type: 'info' }));
     onClose();
   };
 
@@ -105,9 +107,10 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
               <button 
                 type="button" 
                 onClick={handleLogout}
-                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl transition-all cursor-pointer"
+                className="px-3.5 py-2 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 font-extrabold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
               >
-                Sign Out
+                <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                <span>Sign Out</span>
               </button>
               <button 
                 type="button" 
