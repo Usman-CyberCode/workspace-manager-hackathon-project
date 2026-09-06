@@ -1,17 +1,19 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
   RootState, renameWorkspace, deleteWorkspace, inviteWorkspaceMember, 
-  updateMemberRole, setActiveModal, addToast 
+  updateMemberRole, setActiveModal, addToast, importTasks 
 } from '@/store';
 import { Workspace, MockUser, WorkspaceMember } from '@/lib/mockdata';
+import { FileText, Download, Upload } from 'lucide-react';
 
 export default function WorkspaceSettingsModal() {
   const dispatch = useDispatch();
-  const { activeModal } = useSelector((state: RootState) => state.ui);
-  const { workspaces = [], activeWorkspaceId } = useSelector((state: RootState) => state.workspace);
-  const { users = [], currentUser } = useSelector((state: RootState) => state.auth);
+  const state = useSelector((state: RootState) => state);
+  const { activeModal } = state.ui;
+  const { workspaces = [], activeWorkspaceId } = state.workspace;
+  const { users = [], currentUser } = state.auth;
 
   const workspace = workspaces.find((w: Workspace) => w.id === activeWorkspaceId) || workspaces[0];
 
@@ -21,6 +23,8 @@ export default function WorkspaceSettingsModal() {
   const [defaultView, setDefaultView] = useState(workspace?.defaultView || 'kanban');
   const [selectedInviteUser, setSelectedInviteUser] = useState(users[0]?.id || '');
   const [selectedInviteRole, setSelectedInviteRole] = useState<'owner' | 'admin' | 'member' | 'viewer'>('member');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (activeModal !== 'workspaceSettings' || !workspace) return null;
 
@@ -61,6 +65,63 @@ export default function WorkspaceSettingsModal() {
     }
   };
 
+  // Handle PDF Export
+  const handleExportPDF = () => {
+    dispatch(addToast({ message: 'Preparing printable workspace PDF report...', type: 'info' }));
+    setTimeout(() => {
+      window.print();
+    }, 200);
+  };
+
+  // Handle JSON Backup Export
+  const handleExportJSON = () => {
+    try {
+      const backupData = {
+        exportedAt: new Date().toISOString(),
+        version: '2.0',
+        workspace: state.workspace,
+        tasks: state.tasks.items,
+        users: state.auth.users
+      };
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const anchor = document.createElement('a');
+      anchor.setAttribute("href", dataStr);
+      anchor.setAttribute("download", `devon_workspace_backup_${new Date().toISOString().slice(0, 10)}.json`);
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      dispatch(addToast({ message: 'JSON backup downloaded successfully!', type: 'success' }));
+    } catch (e) {
+      dispatch(addToast({ message: 'Failed to export JSON backup.', type: 'error' }));
+    }
+  };
+
+  // Handle JSON Import
+  const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target?.result as string);
+        if (Array.isArray(imported.tasks)) {
+          dispatch(importTasks(imported.tasks));
+          dispatch(addToast({ message: `Successfully restored ${imported.tasks.length} tasks!`, type: 'success' }));
+        } else if (Array.isArray(imported)) {
+          dispatch(importTasks(imported));
+          dispatch(addToast({ message: `Restored ${imported.length} tasks!`, type: 'success' }));
+        } else {
+          throw new Error('Invalid schema');
+        }
+      } catch (err) {
+        dispatch(addToast({ message: 'Invalid JSON backup file format.', type: 'error' }));
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 font-sans animate-fadeIn">
       <div className="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl animate-scaleUp text-slate-800 overflow-y-auto max-h-[90vh]">
@@ -69,7 +130,7 @@ export default function WorkspaceSettingsModal() {
         <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-5">
           <div>
             <h3 className="text-base font-black text-slate-900">Workspace Settings</h3>
-            <p className="text-xs text-slate-500 font-medium">Manage properties, team members, and danger zone</p>
+            <p className="text-xs text-slate-500 font-medium">Manage properties, team members, export data, and backups</p>
           </div>
           <button 
             onClick={() => dispatch(setActiveModal(null))}
@@ -136,6 +197,64 @@ export default function WorkspaceSettingsModal() {
             </button>
           </div>
         </form>
+
+        {/* Data Export, Backup & Restore Section */}
+        <div className="py-5 border-b border-slate-100 text-xs">
+          <div className="mb-3">
+            <h4 className="font-black text-sm text-slate-900">Data Management & Backups</h4>
+            <p className="text-[11px] text-slate-500">Export workspace reports or download and restore JSON backups.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {/* Export PDF */}
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              className="p-3 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-2xl text-left transition-all cursor-pointer group"
+            >
+              <div className="p-2 rounded-xl bg-rose-100 text-rose-600 w-fit mb-2 group-hover:scale-105 transition-transform">
+                <FileText className="w-4 h-4" />
+              </div>
+              <span className="font-bold text-rose-900 block text-xs">Export PDF</span>
+              <span className="text-[10px] text-rose-600 block mt-0.5">3-column printable report</span>
+            </button>
+
+            {/* Download JSON Backup */}
+            <button
+              type="button"
+              onClick={handleExportJSON}
+              className="p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-2xl text-left transition-all cursor-pointer group"
+            >
+              <div className="p-2 rounded-xl bg-emerald-100 text-emerald-600 w-fit mb-2 group-hover:scale-105 transition-transform">
+                <Download className="w-4 h-4" />
+              </div>
+              <span className="font-bold text-emerald-900 block text-xs">Backup JSON</span>
+              <span className="text-[10px] text-emerald-600 block mt-0.5">Download full state</span>
+            </button>
+
+            {/* Restore JSON Backup */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-2xl text-left transition-all cursor-pointer group"
+            >
+              <div className="p-2 rounded-xl bg-blue-100 text-blue-600 w-fit mb-2 group-hover:scale-105 transition-transform">
+                <Upload className="w-4 h-4" />
+              </div>
+              <span className="font-bold text-blue-900 block text-xs">Restore Backup</span>
+              <span className="text-[10px] text-blue-600 block mt-0.5">Upload JSON file</span>
+            </button>
+          </div>
+
+          {/* Hidden File Input for JSON Restore */}
+          <input 
+            ref={fileInputRef} 
+            type="file" 
+            accept=".json" 
+            className="hidden" 
+            onChange={handleImportJSON} 
+          />
+        </div>
 
         {/* Members Management Section */}
         <div className="py-5 border-b border-slate-100 text-xs">

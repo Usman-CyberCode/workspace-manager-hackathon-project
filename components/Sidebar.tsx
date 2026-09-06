@@ -130,6 +130,13 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
           >
             <span>⌨️</span> Keyboard Shortcuts
           </button>
+          <button 
+            onClick={() => dispatch(setActiveModal('workspaceSettings'))}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-900 transition-all cursor-pointer"
+            title="Export PDF, Backup JSON & Restore Data"
+          >
+            <span>💾</span> Export & Backup
+          </button>
         </div>
 
         {/* Projects Section */}
